@@ -3,24 +3,24 @@
 
 namespace GCodeLib {
 
-  GCodeIRConstant::GCodeIRConstant()
-    : type(Type::Integer), value(0L) {}
+  GCodeIRValue::GCodeIRValue()
+    : type(Type::None) {}
 
-  GCodeIRConstant::GCodeIRConstant(int64_t value)
+  GCodeIRValue::GCodeIRValue(int64_t value)
     : type(Type::Integer), value(value) {}
   
-  GCodeIRConstant::GCodeIRConstant(double value)
+  GCodeIRValue::GCodeIRValue(double value)
     : type(Type::Float), value(value) {}
 
-  GCodeIRConstant::Type GCodeIRConstant::getType() const {
+  GCodeIRValue::Type GCodeIRValue::getType() const {
     return this->type;
   }
 
-  bool GCodeIRConstant::is(Type type) const {
+  bool GCodeIRValue::is(Type type) const {
     return this->type == type;
   }
 
-  int64_t GCodeIRConstant::getInteger(int64_t defaultValue) const {
+  int64_t GCodeIRValue::getInteger(int64_t defaultValue) const {
     if (this->is(Type::Integer)) {
       return std::get<int64_t>(this->value);
     } else {
@@ -28,7 +28,7 @@ namespace GCodeLib {
     }
   }
 
-  double GCodeIRConstant::getFloat(double defaultValue) const {
+  double GCodeIRValue::getFloat(double defaultValue) const {
     if (this->is(Type::Float)) {
       return std::get<double>(this->value);
     } else {
@@ -36,7 +36,7 @@ namespace GCodeLib {
     }
   }
 
-  int64_t GCodeIRConstant::asInteger() const {
+  int64_t GCodeIRValue::asInteger() const {
     if (this->is(Type::Integer)) {
       return this->getInteger();
     } else {
@@ -44,7 +44,7 @@ namespace GCodeLib {
     }
   }
 
-  double GCodeIRConstant::asFloat() const {
+  double GCodeIRValue::asFloat() const {
     if (this->is(Type::Float)) {
       return this->getFloat();
     } else {
@@ -52,8 +52,8 @@ namespace GCodeLib {
     }
   }
 
-  std::ostream &operator<<(std::ostream &os, const GCodeIRConstant &cnst) {
-    if (cnst.is(GCodeIRConstant::Type::Integer)) {
+  std::ostream &operator<<(std::ostream &os, const GCodeIRValue &cnst) {
+    if (cnst.is(GCodeIRValue::Type::Integer)) {
       os << cnst.getInteger();
     } else {
       os << cnst.getFloat();
@@ -61,78 +61,26 @@ namespace GCodeLib {
     return os;
   }
 
-  GCodeIRInstruction::GCodeIRInstruction(const GCodeSystemCommand &cmd)
-   : type(GCodeIRInstruction::Type::SystemCommand), value(cmd) {}
-
-  GCodeIRInstruction::Type GCodeIRInstruction::getType() const {
-    return this->type;
-  }
-
-  bool GCodeIRInstruction::is(Type type) const {
-    return this->type == type;
-  }
-
-  const GCodeSystemCommand &GCodeIRInstruction::getSystemCommand() const {
-    return std::get<GCodeSystemCommand>(this->value);
-  }
-
-  std::ostream &operator<<(std::ostream &os, const GCodeIRInstruction &instr) {
-    switch (instr.getType()) {
-      case GCodeIRInstruction::Type::SystemCommand:
-        return os << std::get<GCodeSystemCommand>(instr.value);
-      default:
-        return os;
-    }
-  }
-
-  GCodeSystemCommand::GCodeSystemCommand(FunctionType type, GCodeIRConstant function, const std::map<unsigned char, GCodeIRConstant> &parameters)
-    : type(type), function(function), parameters(parameters) {}
+  GCodeIRInstruction::GCodeIRInstruction(GCodeIROpcode opcode, const GCodeIRValue &value)
+    : opcode(opcode), value(value) {}
   
-  GCodeSystemCommand::FunctionType GCodeSystemCommand::getFunctionType() const {
-    return this->type;
+  GCodeIROpcode GCodeIRInstruction::getOpcode() const {
+    return this->opcode;
   }
 
-  const GCodeIRConstant &GCodeSystemCommand::getFunction() const {
-    return this->function;
+  const GCodeIRValue &GCodeIRInstruction::getValue() const {
+    return this->value;
   }
 
-  bool GCodeSystemCommand::hasParameter(unsigned char key) const {
-    return this->parameters.count(key) != 0;
-  }
-
-  GCodeIRConstant GCodeSystemCommand::getParameter(unsigned char key) const {
-    if (this->hasParameter(key)) {
-      return this->parameters.at(key);
-    } else {
-      return GCodeIRConstant(0L);
-    }
-  }
-
-  std::ostream &operator<<(std::ostream &os, const GCodeSystemCommand &cmd) {
-    os << static_cast<char>(cmd.type) << cmd.function;
-    for (const auto &kv : cmd.parameters) {
-      os << ' ' << kv.first << kv.second;
-    }
-    return os;
-  }
-
-  std::size_t GCodeIRModule::size() const {
+  std::size_t GCodeIRModule::length() const {
     return this->code.size();
   }
 
   const GCodeIRInstruction &GCodeIRModule::at(std::size_t index) const {
-    return *this->code.at(index);
+    return this->code.at(index);
   }
 
-  std::size_t GCodeIRModule::appendInstruction(std::unique_ptr<GCodeIRInstruction> instr) {
-    this->code.push_back(std::move(instr));
-    return this->code.size();
-  }
-
-  std::ostream &operator<<(std::ostream &os, const GCodeIRModule &module) {
-    for (auto &instr : module.code) {
-      os << *instr << std::endl;
-    }
-    return os;
+  void GCodeIRModule::appendInstruction(GCodeIROpcode opcode, const GCodeIRValue &value) {
+    this->code.push_back(GCodeIRInstruction(opcode, value));
   }
 }
