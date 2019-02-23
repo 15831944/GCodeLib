@@ -4,6 +4,7 @@ gcodelib_source = [
   'ir/IR.cpp',
   'ir/Translator.cpp',
   'parser/AST.cpp',
+  'parser/Error.cpp',
   'parser/Parser.cpp',
   'parser/Scanner.cpp',
   'parser/Token.cpp'

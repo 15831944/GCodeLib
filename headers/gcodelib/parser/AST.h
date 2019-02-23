@@ -5,7 +5,8 @@
 #include <memory>
 #include <functional>
 #include <vector>
-#include <iostream>
+#include <variant>
+#include <iosfwd>
 
 namespace GCodeLib {
 
@@ -21,60 +22,52 @@ namespace GCodeLib {
 
     GCodeNode(Type);
     virtual ~GCodeNode() = default;
-
     Type getType() const;
     bool is(Type) const;
 
     friend std::ostream &operator<<(std::ostream &, const GCodeNode &);
-
    protected:
     virtual void dump(std::ostream &) const = 0;
-
    private:
     Type type;
   };
 
-  template <GCodeNode::Type NodeType, typename DataType>
-  class GCodeConstant : public GCodeNode {
-   public:
-    GCodeConstant(DataType value)
-     : GCodeNode::GCodeNode(NodeType), value(value) {}
-    DataType getValue() const {
-      return this->value;
-    }
-   protected:
-    void dump(std::ostream &os) const override {
-      os << this->value;
-    }
-   private:
-    DataType value;
-  };
 
-  using GCodeIntegerContant = GCodeConstant<GCodeNode::Type::IntegerContant, int64_t>;
-  using GCodeFloatContant = GCodeConstant<GCodeNode::Type::FloatContant, double>;
+  class GCodeConstantValue : public GCodeNode {
+   public:
+    GCodeConstantValue(int64_t);
+    GCodeConstantValue(double);
+
+    int64_t asInteger(int64_t = 0) const;
+    double asFloat(double = 0.0) const;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    std::variant<int64_t, double> value;
+  };
 
   class GCodeWord : public GCodeNode {
    public:
-    GCodeWord(unsigned char, std::unique_ptr<GCodeNode>);
+    GCodeWord(unsigned char, std::unique_ptr<GCodeConstantValue>);
     unsigned char getField() const;
-    GCodeNode &getValue() const;
+    GCodeConstantValue &getValue() const;
    protected:
     void dump(std::ostream &) const override;
    private:
     unsigned char field;
-    std::unique_ptr<GCodeNode> value;
+    std::unique_ptr<GCodeConstantValue> value;
   };
 
   class GCodeCommand : public GCodeNode {
    public:
-    GCodeCommand(std::unique_ptr<GCodeNode>, std::vector<std::unique_ptr<GCodeNode>>);
-    GCodeNode &getCommand() const;
-    void getParameters(std::vector<std::reference_wrapper<GCodeNode>> &) const;
+    GCodeCommand(std::unique_ptr<GCodeWord>, std::vector<std::unique_ptr<GCodeWord>>);
+    GCodeWord &getCommand() const;
+    void getParameters(std::vector<std::reference_wrapper<GCodeWord>> &) const;
    protected:
     void dump(std::ostream &) const override;
    private:
-    std::unique_ptr<GCodeNode> command;
-    std::vector<std::unique_ptr<GCodeNode>> parameters;
+    std::unique_ptr<GCodeWord> command;
+    std::vector<std::unique_ptr<GCodeWord>> parameters;
   };
 
   class GCodeBlock : public GCodeNode {

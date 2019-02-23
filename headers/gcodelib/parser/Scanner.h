@@ -33,7 +33,7 @@ namespace GCodeLib {
 
     std::istream &input;
     std::string buffer;
-    GCodeToken::Position source_position;
+    SourcePosition source_position;
     unsigned int options;
   };
 }

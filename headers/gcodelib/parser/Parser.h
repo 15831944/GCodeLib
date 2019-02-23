@@ -4,6 +4,7 @@
 #include "gcodelib/parser/AST.h"
 #include "gcodelib/parser/Scanner.h"
 #include <functional>
+#include <set>
 
 namespace GCodeLib {
 
@@ -19,19 +20,28 @@ namespace GCodeLib {
   class GCodeParser {
    public:
     GCodeParser(GCodeScanner &);
-    std::unique_ptr<GCodeNode> parse();
+    std::unique_ptr<GCodeBlock> parse();
    private:
+    [[noreturn]]
+    void error(const std::string &);
     void shift();
+
+    GCodeToken tokenAt(std::size_t = 0);
+    bool expectToken(GCodeToken::Type, std::size_t = 0);
+    bool expectOperator(GCodeOperator, std::size_t = 0);
+    bool expectOperators(const std::set<GCodeOperator> &, std::size_t = 0);
+    void assert(bool (GCodeParser::*)(), const std::string &);
+
     bool checkBlock();
-    std::unique_ptr<GCodeNode> nextBlock();
+    std::unique_ptr<GCodeBlock> nextBlock();
     bool checkCommand();
-    std::unique_ptr<GCodeNode> nextCommand();
+    std::unique_ptr<GCodeCommand> nextCommand();
     bool checkCommandWord();
-    std::unique_ptr<GCodeNode> nextCommandWord();
+    std::unique_ptr<GCodeWord> nextCommandWord();
     bool checkParameterWord();
-    std::unique_ptr<GCodeNode> nextParameterWord();
+    std::unique_ptr<GCodeWord> nextParameterWord();
     bool checkConstant();
-    std::unique_ptr<GCodeNode> nextConstant();
+    std::unique_ptr<GCodeConstantValue> nextConstant();
 
     GCodeFilteredScanner scanner;
     std::optional<GCodeToken> tokens[2];

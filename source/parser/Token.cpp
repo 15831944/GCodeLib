@@ -3,26 +3,26 @@
 
 namespace GCodeLib {
 
-  GCodeToken::GCodeToken(const Position &position)
-    : token_type(GCodeToken::Type::End), token_position(std::make_unique<GCodeToken::Position>(position)) {}
+  GCodeToken::GCodeToken(const SourcePosition &position)
+    : token_type(GCodeToken::Type::End), token_position(position) {}
 
-  GCodeToken::GCodeToken(int64_t value, const Position &position)
-    : token_type(GCodeToken::Type::IntegerContant), value(value), token_position(std::make_unique<GCodeToken::Position>(position)) {}
+  GCodeToken::GCodeToken(int64_t value, const SourcePosition &position)
+    : token_type(GCodeToken::Type::IntegerContant), value(value), token_position(position) {}
   
-  GCodeToken::GCodeToken(double value, const Position &position)
-    : token_type(GCodeToken::Type::FloatConstant), value(value), token_position(std::make_unique<GCodeToken::Position>(position)) {}
+  GCodeToken::GCodeToken(double value, const SourcePosition &position)
+    : token_type(GCodeToken::Type::FloatConstant), value(value), token_position(position) {}
   
-  GCodeToken::GCodeToken(const std::string &value, bool literal, const Position &position)
-    : token_type(literal ? GCodeToken::Type::Literal : GCodeToken::Type::Comment), value(value), token_position(std::make_unique<GCodeToken::Position>(position)) {}
+  GCodeToken::GCodeToken(const std::string &value, bool literal, const SourcePosition &position)
+    : token_type(literal ? GCodeToken::Type::Literal : GCodeToken::Type::Comment), value(value), token_position(position) {}
 
-  GCodeToken::GCodeToken(GCodeOperator value, const Position &position)
-    : token_type(GCodeToken::Type::Operator), value(value), token_position(std::make_unique<GCodeToken::Position>(position)) {}
+  GCodeToken::GCodeToken(GCodeOperator value, const SourcePosition &position)
+    : token_type(GCodeToken::Type::Operator), value(value), token_position(position) {}
 
-  GCodeToken::GCodeToken(GCodeKeyword value, const Position &position)
-    : token_type(GCodeToken::Type::Keyword), value(value), token_position(std::make_unique<GCodeToken::Position>(position)) {}
+  GCodeToken::GCodeToken(GCodeKeyword value, const SourcePosition &position)
+    : token_type(GCodeToken::Type::Keyword), value(value), token_position(position) {}
 
   GCodeToken::GCodeToken(const GCodeToken &token)
-    : token_type(token.getType()), value(token.value), token_position(std::make_unique<GCodeToken::Position>(token.getPosition())) {}
+    : token_type(token.getType()), value(token.value), token_position(token.getPosition()) {}
 
   GCodeToken::GCodeToken(GCodeToken &&token)
     : token_type(token.token_type), value(std::move(token.value)), token_position(std::move(token.token_position)) {}
@@ -30,7 +30,7 @@ namespace GCodeLib {
   GCodeToken &GCodeToken::operator=(const GCodeToken &token) {
     this->token_type = token.getType();
     this->value = token.value;
-    this->token_position = std::make_unique<GCodeToken::Position>(token.getPosition());
+    this->token_position = token.getPosition();
     return *this;
   }
 
@@ -49,8 +49,8 @@ namespace GCodeLib {
     return this->token_type == type;
   }
 
-  const GCodeToken::Position &GCodeToken::getPosition() const {
-    return *this->token_position;
+  const SourcePosition &GCodeToken::getPosition() const {
+    return this->token_position;
   }
 
   int64_t GCodeToken::getInteger() const {
@@ -103,24 +103,29 @@ namespace GCodeLib {
     }
   }
 
-  GCodeToken::Position::Position(const std::string &tag, uint32_t line, uint16_t column)
-    : tag(tag), line(line), column(column) {}
+  SourcePosition::SourcePosition(const std::string &tag, uint32_t line, uint16_t column, uint8_t checksum)
+    : tag(tag), line(line), column(column), checksum(checksum) {}
 
-  const std::string &GCodeToken::Position::getTag() const {
+  const std::string &SourcePosition::getTag() const {
     return this->tag;
   }
 
-  uint32_t GCodeToken::Position::getLine() const {
+  uint32_t SourcePosition::getLine() const {
     return this->line;
   }
 
-  uint16_t GCodeToken::Position::getColumn() const {
+  uint16_t SourcePosition::getColumn() const {
     return this->column;
   }
+  
+  uint8_t SourcePosition::getChecksum() const {
+    return this->checksum;
+  }
 
-  void GCodeToken::Position::update(uint32_t line, uint16_t column) {
+  void SourcePosition::update(uint32_t line, uint16_t column, uint8_t checksum) {
     this->line = line;
     this->column = column;
+    this->checksum = checksum;
   }
 
   std::ostream &operator<<(std::ostream &os, const GCodeToken &token) {

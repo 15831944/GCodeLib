@@ -2,12 +2,28 @@
 #define GCODELIB_PARSER_TOKEN_H_
 
 #include "gcodelib/Base.h"
-#include <memory>
 #include <string>
 #include <variant>
 #include <iosfwd>
 
 namespace GCodeLib {
+
+  class SourcePosition {
+   public:
+    SourcePosition(const std::string &, uint32_t, uint16_t, uint8_t);
+
+    const std::string &getTag() const;
+    uint32_t getLine() const;
+    uint16_t getColumn() const;
+    uint8_t getChecksum() const;
+
+    void update(uint32_t, uint16_t, uint8_t);
+   private:
+    std::string tag;
+    uint32_t line;
+    uint16_t column;
+    uint8_t checksum;
+  };
 
   enum class GCodeOperator {
     G = 'G',
@@ -51,14 +67,12 @@ namespace GCodeLib {
       End
     };
 
-    class Position;
-
-    GCodeToken(const Position &);
-    GCodeToken(int64_t, const Position &);
-    GCodeToken(double, const Position &);
-    GCodeToken(const std::string &, bool, const Position &);
-    GCodeToken(GCodeOperator, const Position &);
-    GCodeToken(GCodeKeyword, const Position &);
+    GCodeToken(const SourcePosition &);
+    GCodeToken(int64_t, const SourcePosition &);
+    GCodeToken(double, const SourcePosition &);
+    GCodeToken(const std::string &, bool, const SourcePosition &);
+    GCodeToken(GCodeOperator, const SourcePosition &);
+    GCodeToken(GCodeKeyword, const SourcePosition &);
     GCodeToken(const GCodeToken &);
     GCodeToken(GCodeToken &&);
     GCodeToken &operator=(const GCodeToken &);
@@ -66,7 +80,7 @@ namespace GCodeLib {
 
     Type getType() const;
     bool is(Type) const;
-    const Position &getPosition() const;
+    const SourcePosition &getPosition() const;
 
     int64_t getInteger() const;
     double getFloat() const;
@@ -80,22 +94,7 @@ namespace GCodeLib {
    private:
     Type token_type;
     std::variant<int64_t, double, std::string, GCodeOperator, GCodeKeyword> value;
-    std::unique_ptr<Position> token_position;
-  };
-
-  class GCodeToken::Position {
-   public:
-    Position(const std::string &, uint32_t, uint16_t);
-
-    const std::string &getTag() const;
-    uint32_t getLine() const;
-    uint16_t getColumn() const;
-
-    void update(uint32_t, uint16_t);
-   private:
-    std::string tag;
-    uint32_t line;
-    uint16_t column;
+    SourcePosition token_position;
   };
 }
 

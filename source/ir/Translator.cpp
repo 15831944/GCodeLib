@@ -23,31 +23,31 @@ namespace GCodeLib {
 
   static std::pair<unsigned char, GCodeIRConstant> ir_extract_word(GCodeWord &word) {
     unsigned char key = word.getField();
-    GCodeNode &value = word.getValue();
+    GCodeConstantValue &value = word.getValue();
     if (value.is(GCodeNode::Type::IntegerContant)) {
-      return std::make_pair(key, GCodeIRConstant(dynamic_cast<GCodeIntegerContant &>(value).getValue()));
+      return std::make_pair(key, GCodeIRConstant(value.asInteger()));
     } else if (value.is(GCodeNode::Type::FloatContant)) {
-      return std::make_pair(key, GCodeIRConstant(dynamic_cast<GCodeFloatContant &>(value).getValue()));
+      return std::make_pair(key, GCodeIRConstant(value.asFloat()));
     } else {
       return std::make_pair(key, GCodeIRConstant());
     }
   }
 
   static void ir_translate_command(std::vector<std::unique_ptr<GCodeIRInstruction>> &module, GCodeCommand &cmd) {
-    auto command = ir_extract_word(dynamic_cast<GCodeWord &>(cmd.getCommand()));
+    auto command = ir_extract_word(cmd.getCommand());
     std::map<unsigned char, GCodeIRConstant> params;
-    std::vector<std::reference_wrapper<GCodeNode>> paramList;
+    std::vector<std::reference_wrapper<GCodeWord>> paramList;
     cmd.getParameters(paramList);
     for (auto param : paramList) {
-      auto keyValue = ir_extract_word(dynamic_cast<GCodeWord &>(param.get()));
+      auto keyValue = ir_extract_word(param.get());
       params[keyValue.first] = keyValue.second;
     }
     module.push_back(std::make_unique<GCodeIRCommand>(static_cast<GCodeIRCommand::FunctionType>(command.first), command.second, params));
   }
 
-  std::unique_ptr<GCodeIRModule> GCodeIRTranslator::translate(GCodeNode &node) {
+  std::unique_ptr<GCodeIRModule> GCodeIRTranslator::translate(GCodeBlock &node) {
     std::vector<std::unique_ptr<GCodeIRInstruction>> code;
-    ir_translate_node(code, node);
+    ir_translate_block(code, node);
     return std::make_unique<GCodeIRModule>(std::move(code));
   }
 }

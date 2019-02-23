@@ -8,7 +8,7 @@ namespace GCodeLib {
 
   class GCodeIRTranslator {
    public:
-    static std::unique_ptr<GCodeIRModule> translate(GCodeNode &);
+    static std::unique_ptr<GCodeIRModule> translate(GCodeBlock &);
   };
 }
 

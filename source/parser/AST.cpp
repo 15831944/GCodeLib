@@ -1,4 +1,5 @@
 #include "gcodelib/parser/AST.h"
+#include <iostream>
 
 namespace GCodeLib {
 
@@ -18,14 +19,44 @@ namespace GCodeLib {
     return os;
   }
 
-  GCodeWord::GCodeWord(unsigned char field, std::unique_ptr<GCodeNode> value)
+  GCodeConstantValue::GCodeConstantValue(int64_t value)
+    : GCodeNode::GCodeNode(Type::IntegerContant), value(value) {}
+  
+  GCodeConstantValue::GCodeConstantValue(double value)
+    : GCodeNode::GCodeNode(Type::FloatContant), value(value) {}
+
+  int64_t GCodeConstantValue::asInteger(int64_t defaultValue) const {
+    if (this->is(Type::IntegerContant)) {
+      return std::get<int64_t>(this->value);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  double GCodeConstantValue::asFloat(double defaultValue) const {
+    if (this->is(Type::FloatContant)) {
+      return std::get<double>(this->value);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  void GCodeConstantValue::dump(std::ostream &os) const {
+    if (this->is(Type::IntegerContant)) {
+      os << this->asInteger();
+    } else {
+      os << this->asFloat();
+    }
+  }
+
+  GCodeWord::GCodeWord(unsigned char field, std::unique_ptr<GCodeConstantValue> value)
     : GCodeNode::GCodeNode(Type::Word), field(field), value(std::move(value)) {}
 
   unsigned char GCodeWord::getField() const {
     return this->field;
   }
 
-  GCodeNode &GCodeWord::getValue() const {
+  GCodeConstantValue &GCodeWord::getValue() const {
     return *this->value;
   }
 
@@ -33,14 +64,14 @@ namespace GCodeLib {
     os << this->field << this->getValue();
   }
 
-  GCodeCommand::GCodeCommand(std::unique_ptr<GCodeNode> command, std::vector<std::unique_ptr<GCodeNode>> parameters)
+  GCodeCommand::GCodeCommand(std::unique_ptr<GCodeWord> command, std::vector<std::unique_ptr<GCodeWord>> parameters)
     : GCodeNode::GCodeNode(Type::Command), command(std::move(command)), parameters(std::move(parameters)) {}
 
-  GCodeNode &GCodeCommand::getCommand() const {
+  GCodeWord &GCodeCommand::getCommand() const {
     return *this->command;
   }
 
-  void GCodeCommand::getParameters(std::vector<std::reference_wrapper<GCodeNode>> &prms) const {
+  void GCodeCommand::getParameters(std::vector<std::reference_wrapper<GCodeWord>> &prms) const {
     for (auto &param : this->parameters) {
       prms.push_back(*param);
     }
