@@ -18,15 +18,10 @@ namespace GCodeLib {
 
   class GCodeDefaultScanner : public GCodeScanner {
    public:
-    GCodeDefaultScanner(std::istream &, unsigned int = GCodeDefaultScanner::DefaultOptions);
+    GCodeDefaultScanner(std::istream &);
     std::optional<GCodeToken> next() override;
     bool finished() override;
-
-    static constexpr unsigned int FilterEnd = 1;
-    static constexpr unsigned int FilterComments = 1 << 1;
-    static constexpr unsigned int DefaultOptions = 0;
    private:
-    std::optional<GCodeToken> raw_next();
     void next_line();
     void shift(std::size_t);
     void skipWhitespaces();

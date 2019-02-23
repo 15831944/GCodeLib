@@ -1,7 +1,7 @@
 #ifndef GCODELIB_PARSER_ERROR_H_
 #define GCODELIB_PARSER_ERROR_H_
 
-#include "gcodelib/parser/Token.h"
+#include "gcodelib/parser/Source.h"
 #include <exception>
 #include <string>
 #include <optional>

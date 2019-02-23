@@ -10,7 +10,7 @@ namespace GCodeLib {
     virtual ~GCodeInterpreter() = default;
     void execute(GCodeIRModule &);
    protected:
-    virtual void execute(GCodeIRInstruction &) = 0;
+    virtual void execute(const GCodeSystemCommand &) = 0;
   };
 }
 

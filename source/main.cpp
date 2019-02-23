@@ -11,7 +11,8 @@ int main(int argc, const char **argv) {
   GCodeDefaultScanner scanner(is);
   GCodeParser parser(scanner);
   auto root = parser.parse();
-  auto ir = GCodeIRTranslator::translate(*root);
+  GCodeIRTranslator translator;
+  auto ir = translator.translate(*root);
   if (ir) {
     std::cout << *ir << std::endl;
   }

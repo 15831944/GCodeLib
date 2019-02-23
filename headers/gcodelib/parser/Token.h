@@ -2,50 +2,41 @@
 #define GCODELIB_PARSER_TOKEN_H_
 
 #include "gcodelib/Base.h"
+#include "gcodelib/parser/Source.h"
 #include <string>
 #include <variant>
 #include <iosfwd>
 
 namespace GCodeLib {
 
-  class SourcePosition {
-   public:
-    SourcePosition(const std::string &, uint32_t, uint16_t, uint8_t);
-
-    const std::string &getTag() const;
-    uint32_t getLine() const;
-    uint16_t getColumn() const;
-    uint8_t getChecksum() const;
-
-    void update(uint32_t, uint16_t, uint8_t);
-   private:
-    std::string tag;
-    uint32_t line;
-    uint16_t column;
-    uint8_t checksum;
-  };
-
   enum class GCodeOperator {
+// Commands
     G = 'G',
     M = 'M',
-    T = 'T',
+    O = 'O',
+    F = 'F',
     S = 'S',
+    T = 'T',
+// Parameters
+    A = 'A',
+    B = 'B',
+    C = 'C',
+    D = 'D',
+    H = 'H',
+    I = 'I',
+    J = 'J',
+    K = 'K',
+    L = 'L',
     P = 'P',
-    X = 'X',
-    Y = 'Y',
-    Z = 'Z',
+    Q = 'Q',
+    R = 'R',
     U = 'U',
     V = 'V',
     W = 'W',
-    I = 'I',
-    J = 'J',
-    D = 'D',
-    H = 'H',
-    F = 'F',
-    R = 'R',
-    Q = 'Q',
-    E = 'E',
-    N = 'N',
+    X = 'X',
+    Y = 'Y',
+    Z = 'Z',
+// Operations
     Star = '*',
     Percent = '%',
     None = '\0'
@@ -64,7 +55,7 @@ namespace GCodeLib {
       Keyword,
       Literal,
       Comment,
-      End
+      NewLine
     };
 
     GCodeToken(const SourcePosition &);

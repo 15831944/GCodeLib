@@ -5,27 +5,22 @@
 #include "gcodelib/parser/Scanner.h"
 #include <functional>
 #include <set>
+#include <memory>
 
 namespace GCodeLib {
 
-  class GCodeFilteredScanner : public GCodeScanner {
-   public:
-    GCodeFilteredScanner(GCodeScanner &);
-    std::optional<GCodeToken> next() override;
-    bool finished() override;
-   private:
-    GCodeScanner &scanner;
-  };
-
   class GCodeParser {
+    struct FilteredScanner;
    public:
     GCodeParser(GCodeScanner &);
     std::unique_ptr<GCodeBlock> parse();
    private:
+
     [[noreturn]]
     void error(const std::string &);
     void shift();
 
+    std::optional<SourcePosition> position();
     GCodeToken tokenAt(std::size_t = 0);
     bool expectToken(GCodeToken::Type, std::size_t = 0);
     bool expectOperator(GCodeOperator, std::size_t = 0);
@@ -34,6 +29,8 @@ namespace GCodeLib {
 
     bool checkBlock();
     std::unique_ptr<GCodeBlock> nextBlock();
+    bool checkStatement();
+    std::unique_ptr<GCodeNode> nextStatement();
     bool checkCommand();
     std::unique_ptr<GCodeCommand> nextCommand();
     bool checkCommandWord();
@@ -43,7 +40,7 @@ namespace GCodeLib {
     bool checkConstant();
     std::unique_ptr<GCodeConstantValue> nextConstant();
 
-    GCodeFilteredScanner scanner;
+    std::shared_ptr<GCodeParser::FilteredScanner> scanner;
     std::optional<GCodeToken> tokens[2];
   };
 }

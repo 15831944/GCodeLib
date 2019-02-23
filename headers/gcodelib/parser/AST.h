@@ -1,12 +1,13 @@
 #ifndef GCODELIB_PARSER_AST_H_
 #define GCODELIB_PARSER_AST_H_
 
-#include "gcodelib/Base.h"
+#include "gcodelib/parser/Source.h"
 #include <memory>
 #include <functional>
 #include <vector>
 #include <variant>
 #include <iosfwd>
+#include <set>
 
 namespace GCodeLib {
 
@@ -20,23 +21,28 @@ namespace GCodeLib {
       Block
     };
 
-    GCodeNode(Type);
+    GCodeNode(Type, const SourcePosition &);
     virtual ~GCodeNode() = default;
     Type getType() const;
     bool is(Type) const;
+    const SourcePosition &getPosition() const;
+    const std::set<uint32_t> &getLabels() const;
+
+    void addLabel(uint32_t);
 
     friend std::ostream &operator<<(std::ostream &, const GCodeNode &);
    protected:
     virtual void dump(std::ostream &) const = 0;
    private:
     Type type;
+    SourcePosition position;
+    std::set<uint32_t> labels;
   };
-
 
   class GCodeConstantValue : public GCodeNode {
    public:
-    GCodeConstantValue(int64_t);
-    GCodeConstantValue(double);
+    GCodeConstantValue(int64_t, const SourcePosition &);
+    GCodeConstantValue(double, const SourcePosition &);
 
     int64_t asInteger(int64_t = 0) const;
     double asFloat(double = 0.0) const;
@@ -48,7 +54,7 @@ namespace GCodeLib {
 
   class GCodeWord : public GCodeNode {
    public:
-    GCodeWord(unsigned char, std::unique_ptr<GCodeConstantValue>);
+    GCodeWord(unsigned char, std::unique_ptr<GCodeConstantValue>, const SourcePosition &);
     unsigned char getField() const;
     GCodeConstantValue &getValue() const;
    protected:
@@ -60,7 +66,7 @@ namespace GCodeLib {
 
   class GCodeCommand : public GCodeNode {
    public:
-    GCodeCommand(std::unique_ptr<GCodeWord>, std::vector<std::unique_ptr<GCodeWord>>);
+    GCodeCommand(std::unique_ptr<GCodeWord>, std::vector<std::unique_ptr<GCodeWord>>, const SourcePosition &);
     GCodeWord &getCommand() const;
     void getParameters(std::vector<std::reference_wrapper<GCodeWord>> &) const;
    protected:
@@ -72,7 +78,7 @@ namespace GCodeLib {
 
   class GCodeBlock : public GCodeNode {
    public:
-    GCodeBlock(std::vector<std::unique_ptr<GCodeNode>>);
+    GCodeBlock(std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
     void getContent(std::vector<std::reference_wrapper<GCodeNode>> &) const;
    protected:
     void dump(std::ostream &) const override;

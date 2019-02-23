@@ -7,59 +7,38 @@
 namespace GCodeLib {
 
   static std::regex Whitespaces(R"(^[\s]+)");
-  static std::regex Integer(R"(^-?[0-9]+)");
-  static std::regex Float(R"(^-?[0-9]+\.[0-9]+)");
+  static std::regex Integer(R"(^[+-]?[0-9]+)");
+  static std::regex Float(R"(^[+-]?[0-9]+\.[0-9]+)");
   static std::regex Literal(R"(^[a-zA-Z_]{2,}[\w_]*)");
-  static std::regex Operator(R"(^[GMTSPXYZUVWIJDHFRQEN*%])");
+  static std::regex Operator(R"(^[A-DF-MO-Z*%])", std::regex_constants::ECMAScript | std::regex_constants::icase);
   static std::regex Comment(R"(^;.*$)");
   static std::regex BracedComment(R"(^\([^\)]*\))");
-
-  static constexpr bool isEnabled(unsigned int options, unsigned int option) {
-    return (options & option) != 0;
-  }
+  static std::regex LineNumber(R"(N\s*[0-9]+(\.[0-9]*)?)", std::regex_constants::ECMAScript | std::regex_constants::icase);
 
   static bool match_regex(const std::string &string, std::smatch &match, const std::regex &regex) {
     return std::regex_search(string, match, regex) && !match.empty();
   }
 
-  GCodeDefaultScanner::GCodeDefaultScanner(std::istream &is, unsigned int options)
-    : input(is), buffer(""), source_position("", 0, 0, 0), options(options) {
-    this->next_line();
-  }
+  GCodeDefaultScanner::GCodeDefaultScanner(std::istream &is)
+    : input(is), buffer(""), source_position("", 0, 0, 0) {}
 
   std::optional<GCodeToken> GCodeDefaultScanner::next() {
-    std::optional<GCodeToken> token;
-    while (!token.has_value() && !this->finished()) {
-      token = this->raw_next();
-      if (token.has_value()) {
-        GCodeToken &tok = token.value();
-        if ((isEnabled(this->options, GCodeDefaultScanner::FilterEnd) && tok.is(GCodeToken::Type::End)) ||
-          (isEnabled(this->options, GCodeDefaultScanner::FilterComments) && tok.is(GCodeToken::Type::Comment))) {
-          token.reset();
-        }
-      }
-    }
-    return token;
-  }
-
-  bool GCodeDefaultScanner::finished() {
-    return this->buffer.empty() && !this->input.good();
-  }
-
-  std::optional<GCodeToken> GCodeDefaultScanner::raw_next() {
     if (this->finished()) {
       return std::optional<GCodeToken>();
     }
     this->skipWhitespaces();
 
     if (this->buffer.empty()) {
-      GCodeToken token(this->source_position);
       this->next_line();
-      return token;
+      return GCodeToken(this->source_position);
     }
     std::smatch match;
     std::optional<GCodeToken> token;
-    if (match_regex(this->buffer, match, Float)) {
+    if (match_regex(this->buffer, match, LineNumber)) {
+      uint32_t lineNumber = std::stoull(match.str().substr(1));
+      this->source_position.update(lineNumber, 1, 0);
+      token = GCodeToken(this->source_position);
+    } else if (match_regex(this->buffer, match, Float)) {
       token = GCodeToken(std::stod(match.str()), this->source_position);
     } else if (match_regex(this->buffer, match, Integer)) {
       token = GCodeToken(static_cast<int64_t>(std::stoll(match.str())), this->source_position); 
@@ -79,6 +58,10 @@ namespace GCodeLib {
       throw GCodeParseException("Unknown symbol at \'" + this->buffer + '\'', this->source_position);
     }
     return token;
+  }
+
+  bool GCodeDefaultScanner::finished() {
+    return this->buffer.empty() && !this->input.good();
   }
 
   void GCodeDefaultScanner::next_line() {

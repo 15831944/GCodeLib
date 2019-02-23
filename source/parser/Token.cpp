@@ -4,7 +4,7 @@
 namespace GCodeLib {
 
   GCodeToken::GCodeToken(const SourcePosition &position)
-    : token_type(GCodeToken::Type::End), token_position(position) {}
+    : token_type(GCodeToken::Type::NewLine), token_position(position) {}
 
   GCodeToken::GCodeToken(int64_t value, const SourcePosition &position)
     : token_type(GCodeToken::Type::IntegerContant), value(value), token_position(position) {}
@@ -148,8 +148,8 @@ namespace GCodeLib {
       case GCodeToken::Type::Comment:
         os << "(Comment: " << token.getComment();
         break;
-      case GCodeToken::Type::End:
-        os << "(End";
+      case GCodeToken::Type::NewLine:
+        os << "(NewLine";
         break;
     }
     os << "; " << token.getPosition().getLine() << ':' << token.getPosition().getColumn() << ")";

@@ -3,8 +3,8 @@
 
 namespace GCodeLib {
 
-  GCodeNode::GCodeNode(Type type)
-    : type(type) {}
+  GCodeNode::GCodeNode(Type type, const SourcePosition &position)
+    : type(type), position(position) {}
 
   GCodeNode::Type GCodeNode::getType() const {
     return this->type;
@@ -14,16 +14,24 @@ namespace GCodeLib {
     return this->type == type;
   }
 
+  const std::set<uint32_t> &GCodeNode::getLabels() const {
+    return this->labels;
+  }
+
+  void GCodeNode::addLabel(uint32_t label) {
+    this->labels.insert(label);
+  }
+
   std::ostream &operator<<(std::ostream &os, const GCodeNode &node) {
     node.dump(os);
     return os;
   }
 
-  GCodeConstantValue::GCodeConstantValue(int64_t value)
-    : GCodeNode::GCodeNode(Type::IntegerContant), value(value) {}
+  GCodeConstantValue::GCodeConstantValue(int64_t value, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::IntegerContant, position), value(value) {}
   
-  GCodeConstantValue::GCodeConstantValue(double value)
-    : GCodeNode::GCodeNode(Type::FloatContant), value(value) {}
+  GCodeConstantValue::GCodeConstantValue(double value, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::FloatContant, position), value(value) {}
 
   int64_t GCodeConstantValue::asInteger(int64_t defaultValue) const {
     if (this->is(Type::IntegerContant)) {
@@ -49,8 +57,8 @@ namespace GCodeLib {
     }
   }
 
-  GCodeWord::GCodeWord(unsigned char field, std::unique_ptr<GCodeConstantValue> value)
-    : GCodeNode::GCodeNode(Type::Word), field(field), value(std::move(value)) {}
+  GCodeWord::GCodeWord(unsigned char field, std::unique_ptr<GCodeConstantValue> value, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::Word, position), field(field), value(std::move(value)) {}
 
   unsigned char GCodeWord::getField() const {
     return this->field;
@@ -64,8 +72,8 @@ namespace GCodeLib {
     os << this->field << this->getValue();
   }
 
-  GCodeCommand::GCodeCommand(std::unique_ptr<GCodeWord> command, std::vector<std::unique_ptr<GCodeWord>> parameters)
-    : GCodeNode::GCodeNode(Type::Command), command(std::move(command)), parameters(std::move(parameters)) {}
+  GCodeCommand::GCodeCommand(std::unique_ptr<GCodeWord> command, std::vector<std::unique_ptr<GCodeWord>> parameters, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::Command, position), command(std::move(command)), parameters(std::move(parameters)) {}
 
   GCodeWord &GCodeCommand::getCommand() const {
     return *this->command;
@@ -86,8 +94,8 @@ namespace GCodeLib {
   }
   
 
-  GCodeBlock::GCodeBlock(std::vector<std::unique_ptr<GCodeNode>> content)
-    : GCodeNode::GCodeNode(Type::Block), content(std::move(content)) {}
+  GCodeBlock::GCodeBlock(std::vector<std::unique_ptr<GCodeNode>> content, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::Block, position), content(std::move(content)) {}
   
   void GCodeBlock::getContent(std::vector<std::reference_wrapper<GCodeNode>> &content) const {
     for (auto &cmd : this->content) {

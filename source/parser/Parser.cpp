@@ -1,53 +1,75 @@
 #include "gcodelib/parser/Parser.h"
 #include "gcodelib/parser/Error.h"
+#include <iostream>
 
 namespace GCodeLib  {
 
-  static const std::set<GCodeOperator> GCodeOperators = {
-    GCodeOperator::G,
-    GCodeOperator::M,
-    GCodeOperator::Percent,
-    GCodeOperator::Star
-  };
-
   static const std::set<GCodeOperator> GCodeCommandOperators = {
     GCodeOperator::G,
-    GCodeOperator::M
+    GCodeOperator::M,
+    GCodeOperator::F,
+    GCodeOperator::S,
+    GCodeOperator::T
   };
 
-  GCodeFilteredScanner::GCodeFilteredScanner(GCodeScanner &scanner)
-    : scanner(scanner) {}
-  
-  std::optional<GCodeToken> GCodeFilteredScanner::next() {
-    std::optional<GCodeToken> token;
-    while (!token.has_value() && !this->finished()) {
-      token = this->scanner.next();
-      if (!token.has_value()) {
-        continue;
-      }
-      GCodeToken &tok = token.value();
-      if (tok.is(GCodeToken::Type::End) ||
-        tok.is(GCodeToken::Type::Comment) ||
-        tok.is(GCodeToken::Type::Keyword) ||
-        tok.is(GCodeToken::Type::Literal) ||
-        (tok.is(GCodeToken::Type::Operator) &&
-          (tok.getOperator() == GCodeOperator::Percent ||
-          tok.getOperator() == GCodeOperator::Star ||
-          tok.getOperator() == GCodeOperator::None))) {
-        token.reset();
-      }
-    }
-    return token;
-  }
+  static const std::set<GCodeOperator> GCodeParameterLetters = {
+    GCodeOperator::A,
+    GCodeOperator::B,
+    GCodeOperator::C,
+    GCodeOperator::D,
+    GCodeOperator::H,
+    GCodeOperator::I,
+    GCodeOperator::J,
+    GCodeOperator::K,
+    GCodeOperator::L,
+    GCodeOperator::P,
+    GCodeOperator::Q,
+    GCodeOperator::R,
+    GCodeOperator::U,
+    GCodeOperator::V,
+    GCodeOperator::W,
+    GCodeOperator::X,
+    GCodeOperator::Y,
+    GCodeOperator::Z
+  };
 
-  bool GCodeFilteredScanner::finished() {
-    return this->scanner.finished();
-  }
+
+  class GCodeParser::FilteredScanner : public GCodeScanner {
+   public:
+    FilteredScanner(GCodeScanner &scanner)
+      : scanner(scanner) {}
+
+    std::optional<GCodeToken> next() override {
+      std::optional<GCodeToken> token;
+      while (!token.has_value() && !this->finished()) {
+        token = this->scanner.next();
+        if (!token.has_value()) {
+          continue;
+        }
+        GCodeToken &tok = token.value();
+        if (tok.is(GCodeToken::Type::Comment) ||
+          tok.is(GCodeToken::Type::Keyword) ||
+          tok.is(GCodeToken::Type::Literal) ||
+          (tok.is(GCodeToken::Type::Operator) &&
+            (tok.getOperator() == GCodeOperator::Percent ||
+            tok.getOperator() == GCodeOperator::Star ||
+            tok.getOperator() == GCodeOperator::None))) {
+          token.reset();
+        }
+      }
+      return token;
+    }
+    bool finished() override {
+      return this->scanner.finished();
+    }
+   private:
+    GCodeScanner &scanner;
+  };
 
   GCodeParser::GCodeParser(GCodeScanner &scanner)
-    : scanner(scanner) {
-    this->tokens[0] = this->scanner.next();
-    this->tokens[1] = this->scanner.next();
+    : scanner(std::make_unique<FilteredScanner>(scanner)) {
+    this->tokens[0] = this->scanner->next();
+    this->tokens[1] = this->scanner->next();
   }
 
   std::unique_ptr<GCodeBlock> GCodeParser::parse() {
@@ -64,7 +86,15 @@ namespace GCodeLib  {
 
   void GCodeParser::shift() {
     this->tokens[0] = std::move(this->tokens[1]);
-    this->tokens[1] = scanner.next();
+    this->tokens[1] = this->scanner->next();
+  }
+
+  std::optional<SourcePosition> GCodeParser::position() {
+    if (this->tokens[0].has_value()) {
+      return this->tokens[0].value().getPosition();
+    } else {
+      return std::optional<SourcePosition>();
+    }
   }
 
   GCodeToken GCodeParser::tokenAt(std::size_t idx) {
@@ -96,15 +126,41 @@ namespace GCodeLib  {
   }
 
   bool GCodeParser::checkBlock() {
-    return this->checkCommand();
+    return this->checkStatement();
   }
 
   std::unique_ptr<GCodeBlock> GCodeParser::nextBlock() {
+    auto position = this->position();
     std::vector<std::unique_ptr<GCodeNode>> block;
-    while (this->checkCommand()) {
-      block.push_back(this->nextCommand());
+    while (this->checkStatement()) {
+      auto stmt = this->nextStatement();
+      if (stmt) {
+        block.push_back(std::move(stmt));
+      }
     }
-    return std::make_unique<GCodeBlock>(std::move(block));
+    return std::make_unique<GCodeBlock>(std::move(block), position.value());
+  }
+   
+  bool GCodeParser::checkStatement() {
+    return this->checkCommand() ||
+      this->expectToken(GCodeToken::Type::NewLine);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextStatement() {
+    if (this->expectToken(GCodeToken::Type::NewLine)) {
+      auto position = this->position();
+      this->shift();
+      if (this->checkStatement()) {
+        auto stmt = this->nextStatement();
+        if (stmt) {
+          stmt->addLabel(position.value().getLine());
+          return stmt;
+        }
+      }
+      return nullptr;
+    } else {
+      return this->nextCommand();
+    }
   }
 
   bool GCodeParser::checkCommand() {
@@ -112,12 +168,13 @@ namespace GCodeLib  {
   }
 
   std::unique_ptr<GCodeCommand> GCodeParser::nextCommand() {
+    auto position = this->position();
     auto command = this->nextCommandWord();
     std::vector<std::unique_ptr<GCodeWord>> parameters;
     while (this->checkParameterWord()) {
       parameters.push_back(this->nextParameterWord());
     }
-    return std::make_unique<GCodeCommand>(std::move(command), std::move(parameters));
+    return std::make_unique<GCodeCommand>(std::move(command), std::move(parameters), position.value());
   }
 
   bool GCodeParser::checkCommandWord() {
@@ -125,29 +182,25 @@ namespace GCodeLib  {
   }
 
   std::unique_ptr<GCodeWord> GCodeParser::nextCommandWord() {
+    auto position = this->position();
     this->assert(&GCodeParser::checkCommandWord, "Command expected");
     unsigned char field = static_cast<unsigned char>(this->tokenAt().getOperator());
     this->shift();
     std::unique_ptr<GCodeConstantValue> value = this->nextConstant();
-    if (value) {
-      return std::make_unique<GCodeWord>(field, std::move(value));
-    } else {
-      return nullptr;
-    }
+    return std::make_unique<GCodeWord>(field, std::move(value), position.value());
   }
 
   bool GCodeParser::checkParameterWord() {
-    return this->expectToken(GCodeToken::Type::Operator) &&
-      !this->expectOperators(GCodeOperators) &&
-      !this->expectOperator(GCodeOperator::None);
+    return this->expectOperators(GCodeParameterLetters);
   }
 
   std::unique_ptr<GCodeWord> GCodeParser::nextParameterWord() {
+    auto position = this->position();
     this->assert(&GCodeParser::checkParameterWord, "Parameter expected");
     unsigned char field = static_cast<unsigned char>(this->tokenAt().getOperator());
     this->shift();
     std::unique_ptr<GCodeConstantValue> value = this->nextConstant();
-    return std::make_unique<GCodeWord>(field, std::move(value));
+    return std::make_unique<GCodeWord>(field, std::move(value), position.value());
   }
 
   bool GCodeParser::checkConstant() {
@@ -156,11 +209,12 @@ namespace GCodeLib  {
   }
 
   std::unique_ptr<GCodeConstantValue> GCodeParser::nextConstant() {
+    auto position = this->position();
     std::unique_ptr<GCodeConstantValue> res = nullptr;
     if (this->expectToken(GCodeToken::Type::IntegerContant)) {
-      res = std::make_unique<GCodeConstantValue>(this->tokenAt().getInteger());
+      res = std::make_unique<GCodeConstantValue>(this->tokenAt().getInteger(), position.value());
     } else if (this->expectToken(GCodeToken::Type::FloatConstant)) {
-      res = std::make_unique<GCodeConstantValue>(this->tokenAt().getFloat());
+      res = std::make_unique<GCodeConstantValue>(this->tokenAt().getFloat(), position.value());
     } else {
       this->error("Constant expected");
     }
