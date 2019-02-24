@@ -1,8 +1,8 @@
 #include <cstdlib>
 #include <iostream>
 #include "gcodelib/parser/Parser.h"
-#include "gcodelib/ir/Translator.h"
-#include "gcodelib/ir/Interpreter.h"
+#include "gcodelib/runtime/Translator.h"
+#include "gcodelib/runtime/Interpreter.h"
 #include <fstream>
 
 using namespace GCodeLib;
@@ -11,7 +11,7 @@ class TestInterpreter : public GCodeInterpreter {
  public:
   using GCodeInterpreter::GCodeInterpreter;
  protected:
-  void syscall(GCodeSyscallType type, const GCodeIRValue &function, const std::map<unsigned char, GCodeIRValue> &args) override {
+  void syscall(GCodeSyscallType type, const GCodeRuntimeValue &function, const GCodeVariableScope<unsigned char> &args) override {
     std::cout << static_cast<unsigned char>(type) << function << '\t';
     for (auto kv : args) {
       std::cout << kv.first << kv.second << ' ';

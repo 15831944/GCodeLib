@@ -1,4 +1,4 @@
-#include "gcodelib/ir/Translator.h"
+#include "gcodelib/runtime/Translator.h"
 
 namespace GCodeLib {
 
@@ -40,17 +40,17 @@ namespace GCodeLib {
     cmd.getParameters(paramList);
     for (auto param : paramList) {
       param.get().getValue().visit(*this);
-      this->module->appendInstruction(GCodeIROpcode::SetArg, GCodeIRValue(static_cast<int64_t>(param.get().getField())));
+      this->module->appendInstruction(GCodeIROpcode::SetArg, GCodeRuntimeValue(static_cast<int64_t>(param.get().getField())));
     }
     cmd.getCommand().getValue().visit(*this);
-    this->module->appendInstruction(GCodeIROpcode::Syscall, GCodeIRValue(static_cast<int64_t>(syscallType)));
+    this->module->appendInstruction(GCodeIROpcode::Syscall, GCodeRuntimeValue(static_cast<int64_t>(syscallType)));
   }
 
   void GCodeIRTranslator::Impl::visit(const GCodeConstantValue &value) {
     if (value.is(GCodeNode::Type::IntegerContant)) {
-      this->module->appendInstruction(GCodeIROpcode::Push, GCodeIRValue(value.asInteger()));
+      this->module->appendInstruction(GCodeIROpcode::Push, GCodeRuntimeValue(value.asInteger()));
     } else if (value.is(GCodeNode::Type::FloatContant)) {
-      this->module->appendInstruction(GCodeIROpcode::Push, GCodeIRValue(value.asFloat()));
+      this->module->appendInstruction(GCodeIROpcode::Push, GCodeRuntimeValue(value.asFloat()));
     }
   }
 }

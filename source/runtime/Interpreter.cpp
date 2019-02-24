@@ -1,4 +1,4 @@
-#include "gcodelib/ir/Interpreter.h"
+#include "gcodelib/runtime/Interpreter.h"
 
 namespace GCodeLib {
 
@@ -7,27 +7,25 @@ namespace GCodeLib {
   
   void GCodeInterpreter::execute() {
     this->work = true;
-    this->stack.push(GCodeRuntimeFrame());
-    GCodeRuntimeFrame &frame = this->getFrame();
-    std::map<unsigned char, GCodeIRValue> args;
-    while (this->work && frame.pc < this->module.length()) {
-      const GCodeIRInstruction &instr = this->module.at(frame.pc++);
+    this->stack.push(GCodeRuntimeState());
+    GCodeRuntimeState &frame = this->getFrame();
+    GCodeVariableScope<unsigned char> args;
+    while (this->work && frame.getPC() < this->module.length()) {
+      const GCodeIRInstruction &instr = this->module.at(frame.nextPC());
       switch (instr.getOpcode()) {
         case GCodeIROpcode::Push:
-          frame.vstack.push(instr.getValue());
+          frame.push(instr.getValue());
           break;
         case GCodeIROpcode::Prologue:
           args.clear();
           break;
         case GCodeIROpcode::SetArg: {
           unsigned char key = static_cast<unsigned char>(instr.getValue().asInteger());
-          args[key] = frame.vstack.top();
-          frame.vstack.pop();
+          args.put(key, frame.pop());
         } break;
         case GCodeIROpcode::Syscall: {
           GCodeSyscallType type = static_cast<GCodeSyscallType>(instr.getValue().asInteger());
-          GCodeIRValue function = frame.vstack.top();
-          frame.vstack.pop();
+          GCodeRuntimeValue function = frame.pop();
           this->syscall(type, function, args);
         } break;
       }
@@ -36,7 +34,7 @@ namespace GCodeLib {
     this->work = false;
   }
   
-  GCodeRuntimeFrame &GCodeInterpreter::getFrame() {
+  GCodeRuntimeState &GCodeInterpreter::getFrame() {
     return this->stack.top();
   }
 }

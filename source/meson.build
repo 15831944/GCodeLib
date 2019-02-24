@@ -1,13 +1,16 @@
 gcodelib_source = [
   'main.cpp',
-  'ir/Interpreter.cpp',
-  'ir/IR.cpp',
-  'ir/Translator.cpp',
   'parser/AST.cpp',
   'parser/Error.cpp',
   'parser/Parser.cpp',
   'parser/Scanner.cpp',
-  'parser/Token.cpp'
+  'parser/Token.cpp',
+  'runtime/Error.cpp',
+  'runtime/Interpreter.cpp',
+  'runtime/IR.cpp',
+  'runtime/Runtime.cpp',
+  'runtime/Translator.cpp',
+  'runtime/Value.cpp'
 ]
 
 gcodelib_headers = include_directories('../headers')
