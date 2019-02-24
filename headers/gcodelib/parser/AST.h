@@ -21,6 +21,8 @@ namespace GCodeLib {
       Block
     };
 
+    class Visitor;
+
     GCodeNode(Type, const SourcePosition &);
     virtual ~GCodeNode() = default;
     Type getType() const;
@@ -30,6 +32,7 @@ namespace GCodeLib {
 
     void addLabel(uint32_t);
 
+    virtual void visit(Visitor &) = 0;
     friend std::ostream &operator<<(std::ostream &, const GCodeNode &);
    protected:
     virtual void dump(std::ostream &) const = 0;
@@ -46,6 +49,7 @@ namespace GCodeLib {
 
     int64_t asInteger(int64_t = 0) const;
     double asFloat(double = 0.0) const;
+    void visit(Visitor &) override;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -57,6 +61,7 @@ namespace GCodeLib {
     GCodeWord(unsigned char, std::unique_ptr<GCodeConstantValue>, const SourcePosition &);
     unsigned char getField() const;
     GCodeConstantValue &getValue() const;
+    void visit(Visitor &) override;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -69,6 +74,7 @@ namespace GCodeLib {
     GCodeCommand(std::unique_ptr<GCodeWord>, std::vector<std::unique_ptr<GCodeWord>>, const SourcePosition &);
     GCodeWord &getCommand() const;
     void getParameters(std::vector<std::reference_wrapper<GCodeWord>> &) const;
+    void visit(Visitor &) override;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -80,10 +86,20 @@ namespace GCodeLib {
    public:
     GCodeBlock(std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
     void getContent(std::vector<std::reference_wrapper<GCodeNode>> &) const;
+    void visit(Visitor &) override;
    protected:
     void dump(std::ostream &) const override;
    private:
     std::vector<std::unique_ptr<GCodeNode>> content;
+  };
+
+  class GCodeNode::Visitor {
+   public:
+    virtual ~Visitor() = default;
+    virtual void visit(const GCodeConstantValue &) {}
+    virtual void visit(const GCodeWord &) {}
+    virtual void visit(const GCodeCommand &) {}
+    virtual void visit(const GCodeBlock &) {}
   };
 }
 

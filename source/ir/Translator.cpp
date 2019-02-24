@@ -2,53 +2,55 @@
 
 namespace GCodeLib {
 
-  static std::pair<unsigned char, GCodeIRValue> ir_extract_word(GCodeWord &word) {
-    unsigned char key = word.getField();
-    GCodeConstantValue &value = word.getValue();
-    if (value.is(GCodeNode::Type::IntegerContant)) {
-      return std::make_pair(key, GCodeIRValue(value.asInteger()));
-    } else if (value.is(GCodeNode::Type::FloatContant)) {
-      return std::make_pair(key, GCodeIRValue(value.asFloat()));
-    } else {
-      return std::make_pair(key, GCodeIRValue());
-    }
-  }
+  class GCodeIRTranslator::Impl : public GCodeNode::Visitor {
+   public:
+    std::unique_ptr<GCodeIRModule> translate(const GCodeBlock &);
+    void visit(const GCodeBlock &) override;
+    void visit(const GCodeCommand &) override;
+    void visit(const GCodeConstantValue &) override;
+   private:
+    std::unique_ptr<GCodeIRModule> module;
+  };
+
+  GCodeIRTranslator::GCodeIRTranslator()
+    : impl(std::make_shared<Impl>()) {}
 
   std::unique_ptr<GCodeIRModule> GCodeIRTranslator::translate(const GCodeBlock &ast) {
+    return this->impl->translate(ast);
+  }
+
+  std::unique_ptr<GCodeIRModule> GCodeIRTranslator::Impl::translate(const GCodeBlock &ast) {
     this->module = std::make_unique<GCodeIRModule>();
-    this->translateBlock(ast);
+    this->visit(ast);
     return std::move(this->module);
   }
 
-  void GCodeIRTranslator::translateNode(const GCodeNode &node) {
-    if (node.is(GCodeNode::Type::Block)) {
-      this->translateBlock(dynamic_cast<const GCodeBlock &>(node));
-    } else if (node.is(GCodeNode::Type::Command)) {
-      this->translateCommand(dynamic_cast<const GCodeCommand &>(node));
-    }
-  }
-
-  void GCodeIRTranslator::translateBlock(const GCodeBlock &block) {
+  void GCodeIRTranslator::Impl::visit(const GCodeBlock &block) {
     std::vector<std::reference_wrapper<GCodeNode>> content;
     block.getContent(content);
     for (auto node : content) {
-      this->translateNode(node.get());
+      node.get().visit(*this);
     }
   }
 
-  void GCodeIRTranslator::translateCommand(const GCodeCommand &cmd) {
+  void GCodeIRTranslator::Impl::visit(const GCodeCommand &cmd) {
     this->module->appendInstruction(GCodeIROpcode::Prologue);
-    std::pair<unsigned char, GCodeIRValue> command = ir_extract_word(cmd.getCommand());
-    GCodeSyscallType syscallType = static_cast<GCodeSyscallType>(command.first);
-    GCodeIRValue syscallFunction = command.second;
+    GCodeSyscallType syscallType = static_cast<GCodeSyscallType>(cmd.getCommand().getField());
     std::vector<std::reference_wrapper<GCodeWord>> paramList;
     cmd.getParameters(paramList);
     for (auto param : paramList) {
-      std::pair<unsigned char, GCodeIRValue> parameter = ir_extract_word(param.get());
-      this->module->appendInstruction(GCodeIROpcode::Push, parameter.second);
-      this->module->appendInstruction(GCodeIROpcode::SetArg, GCodeIRValue(static_cast<int64_t>(parameter.first)));
+      param.get().getValue().visit(*this);
+      this->module->appendInstruction(GCodeIROpcode::SetArg, GCodeIRValue(static_cast<int64_t>(param.get().getField())));
     }
-    this->module->appendInstruction(GCodeIROpcode::Push, syscallFunction);
+    cmd.getCommand().getValue().visit(*this);
     this->module->appendInstruction(GCodeIROpcode::Syscall, GCodeIRValue(static_cast<int64_t>(syscallType)));
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeConstantValue &value) {
+    if (value.is(GCodeNode::Type::IntegerContant)) {
+      this->module->appendInstruction(GCodeIROpcode::Push, GCodeIRValue(value.asInteger()));
+    } else if (value.is(GCodeNode::Type::FloatContant)) {
+      this->module->appendInstruction(GCodeIROpcode::Push, GCodeIRValue(value.asFloat()));
+    }
   }
 }

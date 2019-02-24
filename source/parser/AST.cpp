@@ -49,6 +49,10 @@ namespace GCodeLib {
     }
   }
 
+  void GCodeConstantValue::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
   void GCodeConstantValue::dump(std::ostream &os) const {
     if (this->is(Type::IntegerContant)) {
       os << this->asInteger();
@@ -68,6 +72,10 @@ namespace GCodeLib {
     return *this->value;
   }
 
+  void GCodeWord::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
   void GCodeWord::dump(std::ostream &os) const {
     os << this->field << this->getValue();
   }
@@ -84,13 +92,16 @@ namespace GCodeLib {
       prms.push_back(*param);
     }
   }
+
+  void GCodeCommand::visit(Visitor &v) {
+    v.visit(*this);
+  }
   
   void GCodeCommand::dump(std::ostream &os) const {
-    os << '[' << this->getCommand() << ": ";
-    for (auto &param : this->parameters) {
-      os << *param << ';';
+    os << this->getCommand();
+    for (std::size_t i = 0; i < this->parameters.size(); i++) {
+      os << ' ' << *this->parameters.at(i);
     }
-    os << ']';
   }
   
 
@@ -103,11 +114,16 @@ namespace GCodeLib {
     }
   }
 
+  void GCodeBlock::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
   void GCodeBlock::dump(std::ostream &os) const {
-    os << '{';
-    for (auto &cmd : this->content) {
-      os << *cmd;
+    for (std::size_t i = 0; i < this->content.size(); i++) {
+      os << *this->content.at(i);
+      if (i + 1 < this->content.size()) {
+        os << std::endl;
+      }
     }
-    os << '}';
   }
 }

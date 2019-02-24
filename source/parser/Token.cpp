@@ -131,28 +131,26 @@ namespace GCodeLib {
   std::ostream &operator<<(std::ostream &os, const GCodeToken &token) {
     switch (token.token_type) {
       case GCodeToken::Type::IntegerContant:
-        os << "(Integer: " << token.getInteger();
+        os << token.getInteger();
         break;
       case GCodeToken::Type::FloatConstant:
-        os << "(Float: " << token.getFloat();
+        os << token.getFloat();
         break;
       case GCodeToken::Type::Literal:
-        os << "(Literal: " << token.getLiteral();
+        os << token.getLiteral();
         break;
       case GCodeToken::Type::Operator:
-        os << "(Operator: " << static_cast<char>(token.getOperator());
-        break;
-      case GCodeToken::Type::Keyword:
-        os << "(Keyword";
+        os << static_cast<char>(token.getOperator());
         break;
       case GCodeToken::Type::Comment:
-        os << "(Comment: " << token.getComment();
+        os << '(' << token.getComment() << ')';
         break;
       case GCodeToken::Type::NewLine:
-        os << "(NewLine";
+        os << std::endl;
+        break;
+      default:
         break;
     }
-    os << "; " << token.getPosition().getLine() << ':' << token.getPosition().getColumn() << ")";
     return os;
   }
 }
