@@ -20,6 +20,12 @@ namespace GCodeLib {
     const GCodeRuntimeValue &peek();
     void dup();
     void swap();
+
+    void negate();
+    void add();
+    void subtract();
+    void multiply();
+    void divide();
    private:
     std::stack<GCodeRuntimeValue> stack;
     std::size_t pc;

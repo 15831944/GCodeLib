@@ -11,7 +11,13 @@ namespace GCodeLib {
     Push,
     Prologue,
     SetArg,
-    Syscall
+    Syscall,
+
+    Negate,
+    Add,
+    Subtract,
+    Multiply,
+    Divide
   };
 
   enum class GCodeSyscallType {

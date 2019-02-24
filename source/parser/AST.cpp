@@ -61,14 +61,56 @@ namespace GCodeLib {
     }
   }
 
-  GCodeWord::GCodeWord(unsigned char field, std::unique_ptr<GCodeConstantValue> value, const SourcePosition &position)
+  GCodeUnaryOperation::GCodeUnaryOperation(Operation operation, std::unique_ptr<GCodeNode> argument, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::UnaryOperation, position), operation(operation), argument(std::move(argument)) {}
+  
+  GCodeUnaryOperation::Operation GCodeUnaryOperation::getOperation() const {
+    return this->operation;
+  }
+
+  GCodeNode &GCodeUnaryOperation::getArgument() const {
+    return *this->argument;
+  }
+
+  void GCodeUnaryOperation::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeUnaryOperation::dump(std::ostream &os) const {
+    os << '[' << static_cast<char>(this->operation) << this->getArgument() << ']';
+  }
+
+  GCodeBinaryOperation::GCodeBinaryOperation(Operation operation, std::unique_ptr<GCodeNode> left, std::unique_ptr<GCodeNode> right, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::BinaryOperation, position), operation(operation), leftArgument(std::move(left)), rightArgument(std::move(right)) {}
+  
+  GCodeBinaryOperation::Operation GCodeBinaryOperation::getOperation() const {
+    return this->operation;
+  }
+
+  GCodeNode &GCodeBinaryOperation::getLeftArgument() const {
+    return *this->leftArgument;
+  }
+
+  GCodeNode &GCodeBinaryOperation::getRightArgument() const {
+    return *this->rightArgument;
+  }
+
+  void GCodeBinaryOperation::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeBinaryOperation::dump(std::ostream &os) const {
+    os << '[' << this->getLeftArgument() << static_cast<char>(this->operation) << this->getRightArgument() << ']';
+  }
+
+  GCodeWord::GCodeWord(unsigned char field, std::unique_ptr<GCodeNode> value, const SourcePosition &position)
     : GCodeNode::GCodeNode(Type::Word, position), field(field), value(std::move(value)) {}
 
   unsigned char GCodeWord::getField() const {
     return this->field;
   }
 
-  GCodeConstantValue &GCodeWord::getValue() const {
+  GCodeNode &GCodeWord::getValue() const {
     return *this->value;
   }
 

@@ -7,6 +7,8 @@ namespace GCodeLib {
     std::unique_ptr<GCodeIRModule> translate(const GCodeBlock &);
     void visit(const GCodeBlock &) override;
     void visit(const GCodeCommand &) override;
+    void visit(const GCodeUnaryOperation &) override;
+    void visit(const GCodeBinaryOperation &) override;
     void visit(const GCodeConstantValue &) override;
    private:
     std::unique_ptr<GCodeIRModule> module;
@@ -44,6 +46,34 @@ namespace GCodeLib {
     }
     cmd.getCommand().getValue().visit(*this);
     this->module->appendInstruction(GCodeIROpcode::Syscall, GCodeRuntimeValue(static_cast<int64_t>(syscallType)));
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeUnaryOperation &node) {
+    node.getArgument().visit(*this);
+    switch (node.getOperation()) {
+      case GCodeUnaryOperation::Operation::Negate:
+        this->module->appendInstruction(GCodeIROpcode::Negate);
+        break;
+    }
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeBinaryOperation &node) {
+    node.getLeftArgument().visit(*this);
+    node.getRightArgument().visit(*this);
+    switch (node.getOperation()) {
+      case GCodeBinaryOperation::Operation::Add:
+        this->module->appendInstruction(GCodeIROpcode::Add);
+        break;
+      case GCodeBinaryOperation::Operation::Subtract:
+        this->module->appendInstruction(GCodeIROpcode::Subtract);
+        break;
+      case GCodeBinaryOperation::Operation::Multiply:
+        this->module->appendInstruction(GCodeIROpcode::Multiply);
+        break;
+      case GCodeBinaryOperation::Operation::Divide:
+        this->module->appendInstruction(GCodeIROpcode::Divide);
+        break;
+    }
   }
 
   void GCodeIRTranslator::Impl::visit(const GCodeConstantValue &value) {

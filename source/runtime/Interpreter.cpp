@@ -28,6 +28,21 @@ namespace GCodeLib {
           GCodeRuntimeValue function = frame.pop();
           this->syscall(type, function, args);
         } break;
+        case GCodeIROpcode::Negate:
+          frame.negate();
+          break;
+        case GCodeIROpcode::Add:
+          frame.add();
+          break;
+        case GCodeIROpcode::Subtract:
+          frame.subtract();
+          break;
+        case GCodeIROpcode::Multiply:
+          frame.multiply();
+          break;
+        case GCodeIROpcode::Divide:
+          frame.divide();
+          break;
       }
     }
     this->stack.pop();

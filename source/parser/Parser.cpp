@@ -51,7 +51,6 @@ namespace GCodeLib  {
           tok.is(GCodeToken::Type::Literal) ||
           (tok.is(GCodeToken::Type::Operator) &&
             (tok.getOperator() == GCodeOperator::Percent ||
-            tok.getOperator() == GCodeOperator::Star ||
             tok.getOperator() == GCodeOperator::None))) {
           token.reset();
         }
@@ -198,8 +197,140 @@ namespace GCodeLib  {
     this->assert(&GCodeParser::checkParameterWord, "Parameter expected");
     unsigned char field = static_cast<unsigned char>(this->tokenAt().getOperator());
     this->shift();
-    std::unique_ptr<GCodeConstantValue> value = this->nextConstant();
+    std::unique_ptr<GCodeNode> value = this->nextParameter();
     return std::make_unique<GCodeWord>(field, std::move(value), position.value());
+  }
+
+  bool GCodeParser::checkParameter() {
+    return this->checkSignedConstant() ||
+      this->checkExpression();
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextParameter() {
+    this->assert(&GCodeParser::checkParameter, "Expression or constant expected");
+    if (this->checkSignedConstant()) {
+      return this->nextSignedConstant();
+    } else {
+      return this->nextExpression();
+    }
+  }
+
+  bool GCodeParser::checkExpression() {
+    return this->expectOperator(GCodeOperator::OpeningBracket);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextExpression() {
+    this->assert(&GCodeParser::checkExpression, "Expression expected");
+    this->shift();
+    auto expr = this->nextAddSub();
+    if (!this->expectOperator(GCodeOperator::ClosingBracket)) {
+      this->error("\']\' expected");
+    }
+    this->shift();
+    return expr;
+  }
+
+  bool GCodeParser::checkAddSub() {
+    return this->checkMulDiv();
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextAddSub() {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkMulDiv, "Expected expression");
+    auto expr = this->nextMulDiv();
+    while (this->expectOperator(GCodeOperator::Plus) ||
+      this->expectOperator(GCodeOperator::Minus)) {
+      GCodeOperator oper = this->tokenAt().getOperator();
+      this->shift();
+      auto right = this->nextMulDiv();
+      switch (oper) {
+        case GCodeOperator::Plus:
+          expr = std::make_unique<GCodeBinaryOperation>(GCodeBinaryOperation::Operation::Add, std::move(expr), std::move(right), position.value());
+          break;
+        case GCodeOperator::Minus:
+          expr = std::make_unique<GCodeBinaryOperation>(GCodeBinaryOperation::Operation::Subtract, std::move(expr), std::move(right), position.value());
+          break;
+        default:
+          break;
+      }
+    }
+    return expr;
+  }
+
+  bool GCodeParser::checkMulDiv() {
+    return this->checkAtom();
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextMulDiv() {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkMulDiv, "Expected expression");
+    auto expr = this->nextAtom();
+    while (this->expectOperator(GCodeOperator::Star) ||
+      this->expectOperator(GCodeOperator::Slash)) {
+      GCodeOperator oper = this->tokenAt().getOperator();
+      this->shift();
+      auto right = this->nextAtom();
+      switch (oper) {
+        case GCodeOperator::Star:
+          expr = std::make_unique<GCodeBinaryOperation>(GCodeBinaryOperation::Operation::Multiply, std::move(expr), std::move(right), position.value());
+          break;
+        case GCodeOperator::Slash:
+          expr = std::make_unique<GCodeBinaryOperation>(GCodeBinaryOperation::Operation::Divide, std::move(expr), std::move(right), position.value());
+          break;
+        default:
+          break;
+      }
+    }
+    return expr;
+  }
+
+  bool GCodeParser::checkAtom() {
+    return this->checkConstant() ||
+      this->checkExpression() ||
+      this->expectOperator(GCodeOperator::Plus) ||
+      this->expectOperator(GCodeOperator::Minus);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextAtom() {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkAtom, "Constant or unary expression exprected");
+    if (this->checkConstant()) {
+      return this->nextConstant();
+    } else if (this->checkExpression()) {
+      return this->nextExpression();
+    } else {
+      GCodeOperator oper = this->tokenAt().getOperator();
+      this->shift();
+      auto argument = this->nextAtom();
+      switch (oper) {
+        case GCodeOperator::Plus:
+          return argument;
+        case GCodeOperator::Minus:
+          return std::make_unique<GCodeUnaryOperation>(GCodeUnaryOperation::Operation::Negate, std::move(argument), position.value());
+        default:
+          return nullptr;
+      }
+    }
+  }
+
+  bool GCodeParser::checkSignedConstant() {
+    return this->expectOperator(GCodeOperator::Plus) ||
+      this->expectOperator(GCodeOperator::Minus) ||
+      this->checkConstant();
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextSignedConstant() {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkSignedConstant, "Expected constant");
+    if (this->checkConstant()) {
+      return this->nextConstant();
+    } else if (this->expectOperator(GCodeOperator::Plus)) {
+      this->shift();
+      return this->nextConstant();
+    } else {
+      this->shift();
+      return std::make_unique<GCodeUnaryOperation>(GCodeUnaryOperation::Operation::Negate, std::move(this->nextConstant()), position.value());
+    }
   }
 
   bool GCodeParser::checkConstant() {

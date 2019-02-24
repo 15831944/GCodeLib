@@ -37,6 +37,18 @@ namespace GCodeLib {
     std::unique_ptr<GCodeWord> nextCommandWord();
     bool checkParameterWord();
     std::unique_ptr<GCodeWord> nextParameterWord();
+    bool checkParameter();
+    std::unique_ptr<GCodeNode> nextParameter();
+    bool checkExpression();
+    std::unique_ptr<GCodeNode> nextExpression();
+    bool checkAddSub();
+    std::unique_ptr<GCodeNode> nextAddSub();
+    bool checkMulDiv();
+    std::unique_ptr<GCodeNode> nextMulDiv();
+    bool checkAtom();
+    std::unique_ptr<GCodeNode> nextAtom();
+    bool checkSignedConstant();
+    std::unique_ptr<GCodeNode> nextSignedConstant();
     bool checkConstant();
     std::unique_ptr<GCodeConstantValue> nextConstant();
 

@@ -37,8 +37,13 @@ namespace GCodeLib {
     Y = 'Y',
     Z = 'Z',
 // Operations
+    Plus = '+',
+    Minus = '-',
     Star = '*',
+    Slash = '/',
     Percent = '%',
+    OpeningBracket = '[',
+    ClosingBracket = ']',
     None = '\0'
   };
 

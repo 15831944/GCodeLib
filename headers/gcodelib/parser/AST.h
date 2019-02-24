@@ -16,6 +16,8 @@ namespace GCodeLib {
     enum class Type {
       IntegerContant,
       FloatContant,
+      UnaryOperation,
+      BinaryOperation,
       Word,
       Command,
       Block
@@ -56,17 +58,56 @@ namespace GCodeLib {
     std::variant<int64_t, double> value;
   };
 
+  class GCodeUnaryOperation : public GCodeNode {
+   public:
+    enum class Operation {
+      Negate = '-'
+    };
+
+    GCodeUnaryOperation(Operation, std::unique_ptr<GCodeNode>, const SourcePosition &);
+    Operation getOperation() const;
+    GCodeNode &getArgument() const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    Operation operation;
+    std::unique_ptr<GCodeNode> argument;
+  };
+
+  class GCodeBinaryOperation : public GCodeNode {
+   public:
+    enum class Operation {
+      Add = '+',
+      Subtract = '-',
+      Multiply = '*',
+      Divide = '/'
+    };
+
+    GCodeBinaryOperation(Operation, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);
+    Operation getOperation() const;
+    GCodeNode &getLeftArgument() const;
+    GCodeNode &getRightArgument() const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    Operation operation;
+    std::unique_ptr<GCodeNode> leftArgument;
+    std::unique_ptr<GCodeNode> rightArgument;
+  };
+
   class GCodeWord : public GCodeNode {
    public:
-    GCodeWord(unsigned char, std::unique_ptr<GCodeConstantValue>, const SourcePosition &);
+    GCodeWord(unsigned char, std::unique_ptr<GCodeNode>, const SourcePosition &);
     unsigned char getField() const;
-    GCodeConstantValue &getValue() const;
+    GCodeNode &getValue() const;
     void visit(Visitor &) override;
    protected:
     void dump(std::ostream &) const override;
    private:
     unsigned char field;
-    std::unique_ptr<GCodeConstantValue> value;
+    std::unique_ptr<GCodeNode> value;
   };
 
   class GCodeCommand : public GCodeNode {
@@ -97,6 +138,8 @@ namespace GCodeLib {
    public:
     virtual ~Visitor() = default;
     virtual void visit(const GCodeConstantValue &) {}
+    virtual void visit(const GCodeUnaryOperation &) {}
+    virtual void visit(const GCodeBinaryOperation &) {}
     virtual void visit(const GCodeWord &) {}
     virtual void visit(const GCodeCommand &) {}
     virtual void visit(const GCodeBlock &) {}
