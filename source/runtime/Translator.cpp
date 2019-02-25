@@ -1,4 +1,5 @@
 #include "gcodelib/runtime/Translator.h"
+#include <algorithm>
 
 namespace GCodeLib {
 
@@ -9,6 +10,7 @@ namespace GCodeLib {
     void visit(const GCodeCommand &) override;
     void visit(const GCodeUnaryOperation &) override;
     void visit(const GCodeBinaryOperation &) override;
+    void visit(const GCodeFunctionCall &) override;
     void visit(const GCodeConstantValue &) override;
    private:
     std::unique_ptr<GCodeIRModule> module;
@@ -113,6 +115,18 @@ namespace GCodeLib {
         this->module->appendInstruction(GCodeIROpcode::Xor);
         break;
     }
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeFunctionCall &call) {
+    std::vector<std::reference_wrapper<GCodeNode>> args;
+    std::reverse(args.begin(), args.end());
+    call.getArguments(args);
+    for (auto arg : args) {
+      arg.get().visit(*this);
+    }
+    this->module->appendInstruction(GCodeIROpcode::Push, static_cast<int64_t>(args.size()));
+    std::size_t symbol = this->module->getSymbolId(call.getFunctionIdentifier());
+    this->module->appendInstruction(GCodeIROpcode::Invoke, static_cast<int64_t>(symbol));
   }
 
   void GCodeIRTranslator::Impl::visit(const GCodeConstantValue &value) {

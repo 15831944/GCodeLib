@@ -13,11 +13,6 @@ namespace GCodeLib {
    private:
     class Impl;
     std::shared_ptr<Impl> impl;
-    // void translateNode(const GCodeNode &);
-    // void _translate(const GCodeNode &);
-    // void _translate(const GCodeBlock &);
-    // void _translate(const GCodeCommand &);
-    // std::unique_ptr<GCodeIRModule> module;
   };
 }
 

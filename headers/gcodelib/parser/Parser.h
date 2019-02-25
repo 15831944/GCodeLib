@@ -54,6 +54,8 @@ namespace GCodeLib {
     std::unique_ptr<GCodeNode> nextPower();
     bool checkAtom();
     std::unique_ptr<GCodeNode> nextAtom();
+    bool checkIdentifier();
+    std::unique_ptr<GCodeNode> nextIdentifier();
     bool checkConstant();
     std::unique_ptr<GCodeConstantValue> nextConstant();
 

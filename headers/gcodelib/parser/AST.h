@@ -18,6 +18,7 @@ namespace GCodeLib {
       FloatContant,
       UnaryOperation,
       BinaryOperation,
+      FunctionCall,
       Word,
       Command,
       Block
@@ -108,6 +109,19 @@ namespace GCodeLib {
     std::unique_ptr<GCodeNode> rightArgument;
   };
 
+  class GCodeFunctionCall : public GCodeNode {
+   public:
+    GCodeFunctionCall(const std::string &, std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
+    const std::string &getFunctionIdentifier() const;
+    void getArguments(std::vector<std::reference_wrapper<GCodeNode>> &) const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    std::string functionIdentifier;
+    std::vector<std::unique_ptr<GCodeNode>> arguments;
+  };
+
   class GCodeWord : public GCodeNode {
    public:
     GCodeWord(unsigned char, std::unique_ptr<GCodeNode>, const SourcePosition &);
@@ -151,6 +165,7 @@ namespace GCodeLib {
     virtual void visit(const GCodeConstantValue &) {}
     virtual void visit(const GCodeUnaryOperation &) {}
     virtual void visit(const GCodeBinaryOperation &) {}
+    virtual void visit(const GCodeFunctionCall &) {}
     virtual void visit(const GCodeWord &) {}
     virtual void visit(const GCodeCommand &) {}
     virtual void visit(const GCodeBlock &) {}

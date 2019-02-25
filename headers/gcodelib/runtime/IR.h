@@ -4,6 +4,7 @@
 #include "gcodelib/Base.h"
 #include "gcodelib/runtime/Value.h"
 #include <vector>
+#include <map>
 
 namespace GCodeLib {
 
@@ -12,6 +13,7 @@ namespace GCodeLib {
     Prologue,
     SetArg,
     Syscall,
+    Invoke,
 
     Negate,
     Add,
@@ -51,9 +53,13 @@ namespace GCodeLib {
     std::size_t length() const;
     const GCodeIRInstruction &at(std::size_t) const;
 
+    std::size_t getSymbolId(const std::string &);
+    const std::string &getSymbol(std::size_t) const;
     void appendInstruction(GCodeIROpcode, const GCodeRuntimeValue & = GCodeRuntimeValue::Empty);
    private:
     std::vector<GCodeIRInstruction> code;
+    std::map<std::size_t, std::string> symbols;
+    std::map<std::string, std::size_t> symbolIdentifiers;
   };
 }
 

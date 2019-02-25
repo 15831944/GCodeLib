@@ -4,6 +4,7 @@
 #include "gcodelib/runtime/Value.h"
 #include <stack>
 #include <map>
+#include <functional>
 
 namespace GCodeLib {
 
@@ -39,20 +40,31 @@ namespace GCodeLib {
   };
 
   template <typename T>
-  class GCodeVariableScope {
+  class GCodeVariableNamespace {
    public:
-    GCodeVariableScope(GCodeVariableScope<T> *parent = nullptr)
+    virtual ~GCodeVariableNamespace() = default;
+    virtual bool has(const T&) const = 0;
+    virtual const GCodeRuntimeValue &get(const T&) const = 0;
+    virtual bool put(const T&, const GCodeRuntimeValue &) = 0;
+    virtual bool remove(const T&) = 0;
+    virtual void clear() = 0;
+  };
+
+  template <typename T>
+  class GCodeVariableScope : public GCodeVariableNamespace<T> {
+   public:
+    GCodeVariableScope(GCodeVariableNamespace<T> *parent = nullptr)
       : parent(parent) {}
 
-    GCodeVariableScope<T> *getParent() {
+    GCodeVariableNamespace<T> *getParent() {
       return this->parent;
     }
 
-    const GCodeVariableScope<T> *getParent() const {
+    const GCodeVariableNamespace<T> *getParent() const {
       return this->parent;
     }
     
-    bool has(const T &key) const {
+    bool has(const T &key) const override {
       return this->scope.count(key) != 0 ||
         (this->parent != nullptr && this->parent->has(key));
     }
@@ -61,7 +73,7 @@ namespace GCodeLib {
       return this->scope.count(key) != 0;
     }
 
-    const GCodeRuntimeValue &get(const T &key) const {
+    const GCodeRuntimeValue &get(const T &key) const override {
       if (this->scope.count(key) != 0) {
         return this->scope.at(key);
       } else if (this->parent != nullptr) {
@@ -71,7 +83,7 @@ namespace GCodeLib {
       }
     }
     
-    bool put(const T &key, const GCodeRuntimeValue &value) {
+    bool put(const T &key, const GCodeRuntimeValue &value) override {
       if (this->scope.count(key) != 0 ||
         this->parent == nullptr ||
         !this->parent->has(key)) {
@@ -83,7 +95,7 @@ namespace GCodeLib {
       }
     }
 
-    bool remove(const T &key) {
+    bool remove(const T &key) override {
       if (this->scope.count(key) != 0) {
         this->scope.erase(key);
         return true;
@@ -94,7 +106,7 @@ namespace GCodeLib {
       }
     }
 
-    void clear() {
+    void clear() override {
       this->scope.clear();
     }
 
@@ -106,8 +118,26 @@ namespace GCodeLib {
       return this->scope.end();
     }
    private:
-    GCodeVariableScope<T> *parent;
+    GCodeVariableNamespace<T> *parent;
     std::map<T, GCodeRuntimeValue> scope;
+  };
+
+  class GCodeFunctionNamespace {
+   public:
+    virtual ~GCodeFunctionNamespace() = default;
+    virtual GCodeRuntimeValue invoke(const std::string &, const std::vector<GCodeRuntimeValue> &) const = 0;
+  };
+
+  class GCodeFunctionScope : public GCodeFunctionNamespace {
+   public:
+    using FnType = std::function<GCodeRuntimeValue(const std::vector<GCodeRuntimeValue> &)>;
+    bool hasFunction(const std::string &);
+    void bindFunction(const std::string &, FnType);
+    bool unbindFunction(const std::string &);
+    void unbindAll();
+    GCodeRuntimeValue invoke(const std::string &, const std::vector<GCodeRuntimeValue> &) const override;
+   private:
+    std::map<std::string, FnType> functions;
   };
 }
 

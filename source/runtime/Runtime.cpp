@@ -178,4 +178,33 @@ namespace GCodeLib {
     GCodeRuntimeValue v1 = this->pop();
     this->push(v1.asInteger() ^ v2.asInteger());
   }
+
+  bool GCodeFunctionScope::hasFunction(const std::string &key) {
+    return this->functions.count(key) != 0;
+  }
+
+  void GCodeFunctionScope::bindFunction(const std::string &key, FnType impl) {
+    this->functions[key] = std::move(impl);
+  }
+
+  bool GCodeFunctionScope::unbindFunction(const std::string &key) {
+    if (this->functions.count(key) != 0) {
+      this->functions.erase(key);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void GCodeFunctionScope::unbindAll() {
+    this->functions.clear();
+  }
+
+  GCodeRuntimeValue GCodeFunctionScope::invoke(const std::string &key, const std::vector<GCodeRuntimeValue> &args) const {
+    if (this->functions.count(key) != 0) {
+      return this->functions.at(key)(args);
+    } else {
+      return GCodeRuntimeValue::Empty;
+    }
+  }
 }

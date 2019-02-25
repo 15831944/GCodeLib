@@ -1,9 +1,44 @@
 #include "gcodelib/runtime/Interpreter.h"
+#include <iostream>
+#include <cmath>
 
 namespace GCodeLib {
 
+  static GCodeFunctionScope::FnType wrap_math_function(double(*fn)(double)) {
+    return [=](const std::vector<GCodeRuntimeValue> &args) {
+      return fn(args.at(0).asFloat());
+    };
+  }
+
+  static GCodeFunctionScope::FnType wrap_math_function(double(*fn)(double, double)) {
+    return [=](const std::vector<GCodeRuntimeValue> &args) {
+      return fn(args.at(0).asFloat(), args.at(1).asFloat());
+    };
+  }
+
+  static void bind_default_functions(GCodeFunctionScope &scope) {
+    scope.bindFunction("ATAN", wrap_math_function(atan2));
+    scope.bindFunction("ABS", wrap_math_function(fabs));
+    scope.bindFunction("ACOS", wrap_math_function(acos));
+    scope.bindFunction("ASIN", wrap_math_function(asin));
+    scope.bindFunction("COS", wrap_math_function(cos));
+    scope.bindFunction("EXP", wrap_math_function(exp));
+    scope.bindFunction("FIX", wrap_math_function(floor));
+    scope.bindFunction("FUP", wrap_math_function(ceil));
+    scope.bindFunction("ROUND", wrap_math_function(round));
+    scope.bindFunction("LN", wrap_math_function(log));
+    scope.bindFunction("SIN", wrap_math_function(sin));
+    scope.bindFunction("SQRT", wrap_math_function(sqrt));
+    scope.bindFunction("TAN", wrap_math_function(tan));
+    scope.bindFunction("EXISTS", [](const std::vector<GCodeRuntimeValue> &args) {
+      return GCodeRuntimeValue(args.at(0).is(GCodeRuntimeValue::Type::None) ? 0L : 1L);
+    });
+  }
+
   GCodeInterpreter::GCodeInterpreter(GCodeIRModule &module)
-    : module(module), work(false) {}
+    : module(module), work(false) {
+    bind_default_functions(this->functions);
+  }
   
   void GCodeInterpreter::execute() {
     this->work = true;
@@ -65,6 +100,15 @@ namespace GCodeLib {
         case GCodeIROpcode::Xor:
           frame.ixor();
           break;
+        case GCodeIROpcode::Invoke: {
+          const std::string &functionId = this->module.getSymbol(instr.getValue().getInteger());
+          std::size_t argc = frame.pop().asInteger();
+          std::vector<GCodeRuntimeValue> args;
+          while (argc--) {
+            args.push_back(frame.pop());
+          }
+          frame.push(this->functions.invoke(functionId, args));
+        } break;
       }
     }
     this->stack.pop();

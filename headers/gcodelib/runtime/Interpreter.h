@@ -17,6 +17,8 @@ namespace GCodeLib {
     GCodeRuntimeState &getFrame();
 
     virtual void syscall(GCodeSyscallType, const GCodeRuntimeValue &, const GCodeVariableScope<unsigned char> &) = 0;
+
+    GCodeFunctionScope functions;
    private:
     GCodeIRModule &module;
     bool work;

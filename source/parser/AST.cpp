@@ -103,6 +103,34 @@ namespace GCodeLib {
     os << '[' << this->getLeftArgument() << static_cast<char>(this->operation) << this->getRightArgument() << ']';
   }
 
+  GCodeFunctionCall::GCodeFunctionCall(const std::string &functionId, std::vector<std::unique_ptr<GCodeNode>> args, const SourcePosition &position)
+    : GCodeNode::GCodeNode(GCodeNode::Type::FunctionCall, position), functionIdentifier(functionId), arguments(std::move(args)) {}
+
+  const std::string &GCodeFunctionCall::getFunctionIdentifier() const {
+    return this->functionIdentifier;
+  }
+
+  void GCodeFunctionCall::getArguments(std::vector<std::reference_wrapper<GCodeNode>> &args) const {
+    for (auto &arg : this->arguments) {
+      args.push_back(std::ref(*arg));
+    }
+  }
+
+  void GCodeFunctionCall::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeFunctionCall::dump(std::ostream &os) const {
+    os << this->functionIdentifier << '[';
+    for (std::size_t i = 0; i < this->arguments.size(); i++) { 
+      os << *this->arguments.at(i);
+      if (i + 1 < this->arguments.size()) {
+        os << ';';
+      }
+    }
+    os << ']';
+  }
+
   GCodeWord::GCodeWord(unsigned char field, std::unique_ptr<GCodeNode> value, const SourcePosition &position)
     : GCodeNode::GCodeNode(Type::Word, position), field(field), value(std::move(value)) {}
 

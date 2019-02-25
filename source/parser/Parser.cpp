@@ -47,7 +47,6 @@ namespace GCodeLib  {
         }
         GCodeToken &tok = token.value();
         if (tok.is(GCodeToken::Type::Comment) ||
-          tok.is(GCodeToken::Type::Literal) ||
           (tok.is(GCodeToken::Type::Keyword) && (
             tok.getKeyword() == GCodeKeyword::None)) ||
           (tok.is(GCodeToken::Type::Operator) &&
@@ -376,6 +375,7 @@ namespace GCodeLib  {
   bool GCodeParser::checkAtom() {
     return this->checkConstant() ||
       this->checkExpression() ||
+      this->checkIdentifier() ||
       this->expectOperator(GCodeOperator::Plus) ||
       this->expectOperator(GCodeOperator::Minus);
   }
@@ -387,6 +387,8 @@ namespace GCodeLib  {
       return this->nextConstant();
     } else if (this->checkExpression()) {
       return this->nextExpression();
+    } else if (this->checkIdentifier()) {
+      return this->nextIdentifier();
     } else {
       GCodeOperator oper = this->tokenAt().getOperator();
       this->shift();
@@ -400,6 +402,27 @@ namespace GCodeLib  {
           return nullptr;
       }
     }
+  }
+
+  bool GCodeParser::checkIdentifier() {
+    return this->expectToken(GCodeToken::Type::Literal);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextIdentifier() {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkIdentifier, "Function call expected");
+    std::string identifier = this->tokenAt().getLiteral();
+    this->shift();
+    if (!this->expectOperator(GCodeOperator::OpeningBracket)) {
+      this->error("\'[\' expected");
+    }
+    this->shift();
+    std::vector<std::unique_ptr<GCodeNode>> args;
+    while (!this->expectOperator(GCodeOperator::ClosingBracket)) {
+      args.push_back(this->nextLogical());
+    }
+    this->shift();
+    return std::make_unique<GCodeFunctionCall>(identifier, std::move(args), position.value());
   }
 
   bool GCodeParser::checkConstant() {
