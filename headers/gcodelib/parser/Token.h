@@ -48,6 +48,16 @@ namespace GCodeLib {
   };
 
   enum class GCodeKeyword {
+    Mod,
+    Eq,
+    Ne,
+    Gt,
+    Ge,
+    Lt,
+    Le,
+    And,
+    Or,
+    Xor,
     None
   };
 

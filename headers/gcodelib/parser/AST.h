@@ -81,7 +81,18 @@ namespace GCodeLib {
       Add = '+',
       Subtract = '-',
       Multiply = '*',
-      Divide = '/'
+      Divide = '/',
+      Power = '^',
+      Modulo = '%',
+      Equals = 'E',
+      NotEquals = 'N',
+      Greater = 'G',
+      GreaterOrEquals = 'g',
+      Lesser = 'L',
+      LesserOrEquals = 'l',
+      And = '&',
+      Or = '|',
+      Xor = 'X'
     };
 
     GCodeBinaryOperation(Operation, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);

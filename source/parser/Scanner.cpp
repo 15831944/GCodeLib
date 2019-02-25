@@ -3,8 +3,22 @@
 #include <iostream>
 #include <string>
 #include <regex>
+#include <map>
 
 namespace GCodeLib {
+
+  static const std::map<std::string, GCodeKeyword> GCodeKeywords = {
+    { "MOD", GCodeKeyword::Mod },
+    { "EQ", GCodeKeyword::Eq },
+    { "NE", GCodeKeyword::Ne },
+    { "GE", GCodeKeyword::Ge },
+    { "GT", GCodeKeyword::Gt },
+    { "LE", GCodeKeyword::Le },
+    { "LT", GCodeKeyword::Lt },
+    { "AND", GCodeKeyword::And },
+    { "OR", GCodeKeyword::Or },
+    { "XOR", GCodeKeyword::Xor }
+  };
 
   static std::regex Whitespaces(R"(^[\s]+)");
   static std::regex Integer(R"(^[0-9]+)");
@@ -43,7 +57,11 @@ namespace GCodeLib {
     } else if (match_regex(this->buffer, match, Integer)) {
       token = GCodeToken(static_cast<int64_t>(std::stoll(match.str())), this->source_position); 
     } else if (match_regex(this->buffer, match, Literal)) {
-      token = GCodeToken(match.str(), true, this->source_position);
+      if (GCodeKeywords.count(match.str()) != 0) {
+        token = GCodeToken(GCodeKeywords.at(match.str()), this->source_position);
+      } else {
+        token = GCodeToken(match.str(), true, this->source_position);
+      }
     } else if (match_regex(this->buffer, match, Operator)) {
       char chr = std::toupper(match.str()[0]);
       token = GCodeToken(static_cast<GCodeOperator>(chr), this->source_position);

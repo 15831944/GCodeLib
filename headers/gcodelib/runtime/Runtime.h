@@ -26,6 +26,13 @@ namespace GCodeLib {
     void subtract();
     void multiply();
     void divide();
+    void power();
+    void modulo();
+    void compare();
+    void test(int64_t);
+    void iand();
+    void ior();
+    void ixor();
    private:
     std::stack<GCodeRuntimeValue> stack;
     std::size_t pc;

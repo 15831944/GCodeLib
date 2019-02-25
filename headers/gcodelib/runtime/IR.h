@@ -17,7 +17,14 @@ namespace GCodeLib {
     Add,
     Subtract,
     Multiply,
-    Divide
+    Divide,
+    Power,
+    Modulo,
+    Compare,
+    Test,
+    And,
+    Or,
+    Xor
   };
 
   enum class GCodeSyscallType {

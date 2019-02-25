@@ -34,6 +34,13 @@ namespace GCodeLib {
     Type type;
     std::variant<int64_t, double> value;
   };
+
+  enum class GCodeCompare {
+    Equals = 1,
+    NotEquals = 1 << 1,
+    Greater = 1 << 2,
+    Lesser = 1 << 3
+  };
 }
 
 #endif

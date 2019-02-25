@@ -43,6 +43,28 @@ namespace GCodeLib {
         case GCodeIROpcode::Divide:
           frame.divide();
           break;
+        case GCodeIROpcode::Power:
+          frame.power();
+          break;
+        case GCodeIROpcode::Modulo:
+          frame.modulo();
+          break;
+        case GCodeIROpcode::Compare:
+          frame.compare();
+          break;
+        case GCodeIROpcode::Test: {
+          int64_t mask = instr.getValue().asInteger();
+          frame.test(mask);
+        } break;
+        case GCodeIROpcode::And:
+          frame.iand();
+          break;
+        case GCodeIROpcode::Or:
+          frame.ior();
+          break;
+        case GCodeIROpcode::Xor:
+          frame.ixor();
+          break;
       }
     }
     this->stack.pop();

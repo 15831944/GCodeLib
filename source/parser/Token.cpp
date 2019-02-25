@@ -142,6 +142,9 @@ namespace GCodeLib {
       case GCodeToken::Type::Operator:
         os << static_cast<char>(token.getOperator());
         break;
+      case GCodeToken::Type::Keyword:
+        os << "Keyword:" << static_cast<int>(token.getKeyword());
+        break;
       case GCodeToken::Type::Comment:
         os << '(' << token.getComment() << ')';
         break;

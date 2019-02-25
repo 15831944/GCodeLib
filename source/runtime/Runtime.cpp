@@ -1,7 +1,11 @@
 #include "gcodelib/runtime/Runtime.h"
 #include "gcodelib/runtime/Error.h"
+#include <cmath>
 
 namespace GCodeLib {
+
+  static const int64_t GCodeTrue = 1;
+  static const int64_t GCodeFalse = 0;
 
   GCodeRuntimeState::GCodeRuntimeState()
     : pc(0) {}
@@ -91,9 +95,87 @@ namespace GCodeLib {
       this->push(v1.asFloat() * v2.asFloat());
     }
   }
+
   void GCodeRuntimeState::divide() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
     this->push(v1.asFloat() / v2.asFloat());
+  }
+
+  void GCodeRuntimeState::power() {
+    GCodeRuntimeValue v2 = this->pop();
+    GCodeRuntimeValue v1 = this->pop();
+    this->push(pow(v1.asFloat(), v2.asFloat()));
+  }
+
+  void GCodeRuntimeState::modulo() {
+    GCodeRuntimeValue v2 = this->pop();
+    GCodeRuntimeValue v1 = this->pop();
+    if (both_integers(v1, v2)) {
+      this->push(v1.getInteger() % v2.getInteger());
+    } else {
+      this->push(fmod(v1.asFloat(), v2.asFloat()));
+    }
+  }
+
+  void GCodeRuntimeState::compare() {
+    GCodeRuntimeValue v2 = this->pop();
+    GCodeRuntimeValue v1 = this->pop();
+    int64_t result = 0;
+    if (both_integers(v1, v2)) {
+      int64_t i1 = v1.getInteger();
+      int64_t i2 = v2.getInteger();
+      if (i1 == i2) {
+        result |= static_cast<int64_t>(GCodeCompare::Equals);
+      } else {
+        result |= static_cast<int64_t>(GCodeCompare::NotEquals);
+        if (i1 > i2) {
+          result |= static_cast<int64_t>(GCodeCompare::Greater);
+        } else {
+          result |= static_cast<int64_t>(GCodeCompare::Lesser);
+        }
+      }
+    } else {
+      double d1 = v1.asFloat();
+      double d2 = v2.asFloat();
+      if (d1 == d2) {
+        result |= static_cast<int64_t>(GCodeCompare::Equals);
+      } else {
+        result |= static_cast<int64_t>(GCodeCompare::NotEquals);
+        if (d1 > d2) {
+          result |= static_cast<int64_t>(GCodeCompare::Greater);
+        } else {
+          result |= static_cast<int64_t>(GCodeCompare::Lesser);
+        }
+      }
+    }
+    this->push(result);
+  }
+
+  void GCodeRuntimeState::test(int64_t mask) {
+    int64_t value = this->pop().asInteger();
+    if ((value & mask) != 0) {
+      this->push(GCodeTrue);
+    } else {
+      this->push(GCodeFalse);
+    }
+  }
+
+  void GCodeRuntimeState::iand() {
+    GCodeRuntimeValue v2 = this->pop();
+    GCodeRuntimeValue v1 = this->pop();
+    this->push(v1.asInteger() & v2.asInteger());
+  }
+
+  void GCodeRuntimeState::ior() {
+    GCodeRuntimeValue v2 = this->pop();
+    GCodeRuntimeValue v1 = this->pop();
+    this->push(v1.asInteger() | v2.asInteger());
+  }
+
+  void GCodeRuntimeState::ixor() {
+    GCodeRuntimeValue v2 = this->pop();
+    GCodeRuntimeValue v1 = this->pop();
+    this->push(v1.asInteger() ^ v2.asInteger());
   }
 }

@@ -73,6 +73,45 @@ namespace GCodeLib {
       case GCodeBinaryOperation::Operation::Divide:
         this->module->appendInstruction(GCodeIROpcode::Divide);
         break;
+      case GCodeBinaryOperation::Operation::Power:
+        this->module->appendInstruction(GCodeIROpcode::Power);
+        break;
+      case GCodeBinaryOperation::Operation::Modulo:
+        this->module->appendInstruction(GCodeIROpcode::Modulo);
+        break;
+      case GCodeBinaryOperation::Operation::Equals:
+        this->module->appendInstruction(GCodeIROpcode::Compare);
+        this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Equals));
+        break;
+      case GCodeBinaryOperation::Operation::NotEquals:
+        this->module->appendInstruction(GCodeIROpcode::Compare);
+        this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::NotEquals));
+        break;
+      case GCodeBinaryOperation::Operation::Greater:
+        this->module->appendInstruction(GCodeIROpcode::Compare);
+        this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Greater));
+        break;
+      case GCodeBinaryOperation::Operation::GreaterOrEquals:
+        this->module->appendInstruction(GCodeIROpcode::Compare);
+        this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Equals) | static_cast<int64_t>(GCodeCompare::Greater));
+        break;
+      case GCodeBinaryOperation::Operation::Lesser:
+        this->module->appendInstruction(GCodeIROpcode::Compare);
+        this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Lesser));
+        break;
+      case GCodeBinaryOperation::Operation::LesserOrEquals:
+        this->module->appendInstruction(GCodeIROpcode::Compare);
+        this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Equals) | static_cast<int64_t>(GCodeCompare::Lesser));
+        break;
+      case GCodeBinaryOperation::Operation::And:
+        this->module->appendInstruction(GCodeIROpcode::And);
+        break;
+      case GCodeBinaryOperation::Operation::Or:
+        this->module->appendInstruction(GCodeIROpcode::Or);
+        break;
+      case GCodeBinaryOperation::Operation::Xor:
+        this->module->appendInstruction(GCodeIROpcode::Xor);
+        break;
     }
   }
 
