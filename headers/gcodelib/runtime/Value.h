@@ -18,6 +18,8 @@ namespace GCodeLib {
     GCodeRuntimeValue();
     GCodeRuntimeValue(int64_t);
     GCodeRuntimeValue(double);
+    GCodeRuntimeValue(const GCodeRuntimeValue &);
+    GCodeRuntimeValue &operator=(const GCodeRuntimeValue &);
 
     Type getType() const;
     bool is(Type) const;

@@ -5,6 +5,9 @@
 #include "gcodelib/runtime/Value.h"
 #include <vector>
 #include <map>
+#include <functional>
+#include <memory>
+#include <iosfwd>
 
 namespace GCodeLib {
 
@@ -14,6 +17,10 @@ namespace GCodeLib {
     SetArg,
     Syscall,
     Invoke,
+    Jump,
+    JumpIf,
+    Call,
+    Ret,
 
     Negate,
     Add,
@@ -26,7 +33,8 @@ namespace GCodeLib {
     Test,
     And,
     Or,
-    Xor
+    Xor,
+    Not
   };
 
   enum class GCodeSyscallType {
@@ -43,9 +51,28 @@ namespace GCodeLib {
 
     GCodeIROpcode getOpcode() const;
     const GCodeRuntimeValue &getValue() const;
+
+    void setValue(const GCodeRuntimeValue &);
    private:
     GCodeIROpcode opcode;
     GCodeRuntimeValue value;
+  };
+
+  class GCodeIRModule; // Forward referencing
+
+  class GCodeIRLabel {
+   public:
+    GCodeIRLabel(GCodeIRModule &);
+    void bind();
+    bool bound() const;
+    void jump();
+    void jumpIf();
+    void call();
+    std::size_t getAddress() const;
+   private:
+    GCodeIRModule &module;
+    std::optional<std::size_t> address;
+    std::vector<std::size_t> patched;
   };
 
   class GCodeIRModule {
@@ -55,11 +82,17 @@ namespace GCodeLib {
 
     std::size_t getSymbolId(const std::string &);
     const std::string &getSymbol(std::size_t) const;
+    std::unique_ptr<GCodeIRLabel> newLabel();
+    GCodeIRLabel &getProcedure(int64_t);
     void appendInstruction(GCodeIROpcode, const GCodeRuntimeValue & = GCodeRuntimeValue::Empty);
+
+    friend std::ostream &operator<<(std::ostream &, const GCodeIRModule &);
+    friend class GCodeIRLabel;
    private:
     std::vector<GCodeIRInstruction> code;
     std::map<std::size_t, std::string> symbols;
     std::map<std::string, std::size_t> symbolIdentifiers;
+    std::map<int64_t, std::shared_ptr<GCodeIRLabel>> procedures;
   };
 }
 

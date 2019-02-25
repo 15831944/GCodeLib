@@ -17,7 +17,16 @@ namespace GCodeLib {
     { "LT", GCodeKeyword::Lt },
     { "AND", GCodeKeyword::And },
     { "OR", GCodeKeyword::Or },
-    { "XOR", GCodeKeyword::Xor }
+    { "XOR", GCodeKeyword::Xor },
+    { "sub", GCodeKeyword::Sub },
+    { "endsub", GCodeKeyword::Endsub },
+    { "call", GCodeKeyword::Call },
+    { "if", GCodeKeyword::If },
+    { "elseif", GCodeKeyword::Elseif },
+    { "else", GCodeKeyword::Else },
+    { "endif", GCodeKeyword::Endif },
+    { "while", GCodeKeyword::While },
+    { "endwhile", GCodeKeyword::Endwhile },
   };
 
   static std::regex Whitespaces(R"(^[\s]+)");

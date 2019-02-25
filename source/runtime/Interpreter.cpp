@@ -63,6 +63,24 @@ namespace GCodeLib {
           GCodeRuntimeValue function = frame.pop();
           this->syscall(type, function, args);
         } break;
+        case GCodeIROpcode::Jump: {
+          std::size_t pc = static_cast<std::size_t>(instr.getValue().asInteger());
+          frame.jump(pc);
+        } break;
+        case GCodeIROpcode::JumpIf: {
+          std::size_t pc = static_cast<std::size_t>(instr.getValue().asInteger());
+          bool cond = frame.pop().asInteger() != 0;
+          if (cond) {
+            frame.jump(pc);
+          }
+        } break;
+        case GCodeIROpcode::Call: {
+          int64_t pid = frame.pop().asInteger();
+          frame.call(this->module.getProcedure(pid).getAddress());
+        } break;
+        case GCodeIROpcode::Ret: {
+          frame.ret();
+        } break;
         case GCodeIROpcode::Negate:
           frame.negate();
           break;
@@ -99,6 +117,9 @@ namespace GCodeLib {
           break;
         case GCodeIROpcode::Xor:
           frame.ixor();
+          break;
+        case GCodeIROpcode::Not:
+          frame.inot();
           break;
         case GCodeIROpcode::Invoke: {
           const std::string &functionId = this->module.getSymbol(instr.getValue().getInteger());

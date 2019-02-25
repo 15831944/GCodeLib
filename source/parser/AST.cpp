@@ -196,4 +196,100 @@ namespace GCodeLib {
       }
     }
   }
+
+  GCodeProcedureDefinition::GCodeProcedureDefinition(int64_t id, std::unique_ptr<GCodeNode> body, std::vector<std::unique_ptr<GCodeNode>> rets, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::ProcedureDefinition, position), identifier(id), body(std::move(body)), retValues(std::move(rets)) {}
+  
+  int64_t GCodeProcedureDefinition::getIdentifier() const {
+    return this->identifier;
+  }
+
+  GCodeNode &GCodeProcedureDefinition::getBody() const {
+    return *this->body;
+  }
+
+  void GCodeProcedureDefinition::getReturnValues(std::vector<std::reference_wrapper<GCodeNode>> &rets) const {
+    for (auto &ret : this->retValues) {
+      rets.push_back(std::ref(*ret));
+    }
+  }
+
+  void GCodeProcedureDefinition::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeProcedureDefinition::dump(std::ostream &os) const {
+    os << this->identifier << '{' << *this->body << "}[";
+    for (auto &ret : this->retValues) {
+      os << *ret << ';';
+    }
+    os << ']';
+  }
+
+  GCodeProcedureCall::GCodeProcedureCall(std::unique_ptr<GCodeNode> pid, std::vector<std::unique_ptr<GCodeNode>> args, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::ProcedureCall, position), procedureId(std::move(pid)), args(std::move(args)) {}
+  
+  GCodeNode &GCodeProcedureCall::getProcedureId() const {
+    return *this->procedureId;
+  }
+
+  void GCodeProcedureCall::getArguments(std::vector<std::reference_wrapper<GCodeNode>> &args) const {
+    for (auto &arg : this->args) {
+      args.push_back(std::ref(*arg));
+    }
+  }
+
+  void GCodeProcedureCall::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeProcedureCall::dump(std::ostream &os) const {
+    os << "Call:" << *this->procedureId;
+  }
+
+  GCodeConditional::GCodeConditional(std::unique_ptr<GCodeNode> condition, std::unique_ptr<GCodeNode> thenBody, std::unique_ptr<GCodeNode> elseBody, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::Conditional, position), condition(std::move(condition)), thenBody(std::move(thenBody)), elseBody(std::move(elseBody)) {}
+  
+  GCodeNode &GCodeConditional::getCondition() const {
+    return *this->condition;
+  }
+
+  GCodeNode &GCodeConditional::getThenBody() const {
+    return *this->thenBody;
+  }
+
+  GCodeNode *GCodeConditional::getElseBody() const {
+    return this->elseBody.get();
+  }
+
+  void GCodeConditional::visit(Visitor &v) {
+    v.visit(*this);
+  }
+  
+  void GCodeConditional::dump(std::ostream &os) const {
+    if (this->elseBody) {
+      os << "[if " << *this->condition << " then " << *this->thenBody << " else " << *this->elseBody << ']';
+    } else {
+      os << "[if " << *this->condition << " then " << *this->thenBody << ']';
+    }
+  }
+
+  GCodeWhileLoop::GCodeWhileLoop(std::unique_ptr<GCodeNode> condition, std::unique_ptr<GCodeNode> body, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::WhileLoop, position), condition(std::move(condition)), body(std::move(body)) {}
+
+  GCodeNode &GCodeWhileLoop::getCondition() const {
+    return *this->condition;
+  }
+
+  GCodeNode &GCodeWhileLoop::getBody() const {
+    return *this->body;
+  }
+
+  void GCodeWhileLoop::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeWhileLoop::dump(std::ostream &os) const {
+    os << "[while " << this->getCondition() << " do " << this->getBody() << ']';
+  }
 }

@@ -14,6 +14,61 @@ namespace GCodeLib {
     return this->value;
   }
 
+  void GCodeIRInstruction::setValue(const GCodeRuntimeValue &value) {
+    this->value = value;
+  }
+
+  GCodeIRLabel::GCodeIRLabel(GCodeIRModule &module)
+    : module(module) {}
+
+  void GCodeIRLabel::bind() {
+    if (!this->address.has_value()) {
+      this->address = module.code.size();
+      for (std::size_t addr : this->patched) {
+        this->module.code[addr].setValue(static_cast<int64_t>(this->address.value()));
+      }
+      this->patched.clear();
+    }
+  }
+  
+  bool GCodeIRLabel::bound() const {
+    return this->address.has_value();
+  }
+
+  void GCodeIRLabel::jump() {
+    if (this->address.has_value()) {
+      this->module.appendInstruction(GCodeIROpcode::Jump, static_cast<int64_t>(this->address.value()));
+    } else {
+      this->module.appendInstruction(GCodeIROpcode::Jump);
+      std::size_t addr = this->module.code.size() - 1;
+      this->patched.push_back(addr);
+    }
+  }
+
+  void GCodeIRLabel::jumpIf() {
+    if (this->address.has_value()) {
+      this->module.appendInstruction(GCodeIROpcode::JumpIf, static_cast<int64_t>(this->address.value()));
+    } else {
+      this->module.appendInstruction(GCodeIROpcode::JumpIf);
+      std::size_t addr = this->module.code.size() - 1;
+      this->patched.push_back(addr);
+    }
+  }
+
+  void GCodeIRLabel::call() {
+    if (this->address.has_value()) {
+      this->module.appendInstruction(GCodeIROpcode::Call, static_cast<int64_t>(this->address.value()));
+    } else {
+      this->module.appendInstruction(GCodeIROpcode::Call);
+      std::size_t addr = this->module.code.size() - 1;
+      this->patched.push_back(addr);
+    }
+  }
+  
+  std::size_t GCodeIRLabel::getAddress() const {
+    return this->address.value();
+  }
+
   std::size_t GCodeIRModule::length() const {
     return this->code.size();
   }
@@ -42,7 +97,25 @@ namespace GCodeLib {
     }
   }
 
+  GCodeIRLabel &GCodeIRModule::getProcedure(int64_t id) {
+    if (this->procedures.count(id) == 0) {
+      this->procedures[id] = std::make_shared<GCodeIRLabel>(*this);
+    }
+    return *this->procedures[id];
+  }
+
   void GCodeIRModule::appendInstruction(GCodeIROpcode opcode, const GCodeRuntimeValue &value) {
     this->code.push_back(GCodeIRInstruction(opcode, value));
+  }
+
+  std::unique_ptr<GCodeIRLabel> GCodeIRModule::newLabel() {
+    return std::make_unique<GCodeIRLabel>(*this);
+  }
+
+  std::ostream &operator<<(std::ostream &os, const GCodeIRModule &module) {
+    for (auto &instr : module.code) {
+      os << &instr << '\t' << static_cast<int64_t>(instr.getOpcode()) << '\t' << instr.getValue() << std::endl;
+    }
+    return os;
   }
 }

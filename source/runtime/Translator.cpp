@@ -11,6 +11,10 @@ namespace GCodeLib {
     void visit(const GCodeUnaryOperation &) override;
     void visit(const GCodeBinaryOperation &) override;
     void visit(const GCodeFunctionCall &) override;
+    void visit(const GCodeProcedureDefinition &) override;
+    void visit(const GCodeProcedureCall &) override;
+    void visit(const GCodeConditional &) override;
+    void visit(const GCodeWhileLoop &) override;
     void visit(const GCodeConstantValue &) override;
    private:
     std::unique_ptr<GCodeIRModule> module;
@@ -127,6 +131,56 @@ namespace GCodeLib {
     this->module->appendInstruction(GCodeIROpcode::Push, static_cast<int64_t>(args.size()));
     std::size_t symbol = this->module->getSymbolId(call.getFunctionIdentifier());
     this->module->appendInstruction(GCodeIROpcode::Invoke, static_cast<int64_t>(symbol));
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeProcedureDefinition &definition) {
+    auto label = this->module->newLabel();
+    label->jump();
+    auto &proc = this->module->getProcedure(definition.getIdentifier());
+    proc.bind();
+    definition.getBody().visit(*this);
+    // std::vector<std::reference_wrapper<GCodeNode>> rets;
+    // definition.getReturnValues(rets);
+    // std::reverse(rets.begin(), rets.end());
+    // for (auto ret : rets) {
+    //   ret.get().visit(*this);
+    // }
+    this->module->appendInstruction(GCodeIROpcode::Ret);
+    label->bind();
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeProcedureCall &call) {
+    call.getProcedureId().visit(*this);
+    this->module->appendInstruction(GCodeIROpcode::Call);
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeConditional &conditional) {
+    auto endifLabel = this->module->newLabel();
+    conditional.getCondition().visit(*this);
+    this->module->appendInstruction(GCodeIROpcode::Not);
+    if (conditional.getElseBody() != nullptr) {
+      auto elseLabel = this->module->newLabel();
+      elseLabel->jumpIf();
+      conditional.getThenBody().visit(*this);
+      endifLabel->jump();
+      elseLabel->bind();
+      conditional.getElseBody()->visit(*this);
+    } else {
+      endifLabel->jumpIf();
+      conditional.getThenBody().visit(*this);
+    }
+    endifLabel->bind();
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeWhileLoop &loop) {
+    auto loopStart = this->module->newLabel();
+    auto loopEnd = this->module->newLabel();
+    loopEnd->jump();
+    loopStart->bind();
+    loop.getBody().visit(*this);
+    loopEnd->bind();
+    loop.getCondition().visit(*this);
+    loopStart->jumpIf();
   }
 
   void GCodeIRTranslator::Impl::visit(const GCodeConstantValue &value) {

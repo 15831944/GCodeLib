@@ -22,6 +22,19 @@ namespace GCodeLib {
     this->pc = pc;
   }
 
+  void GCodeRuntimeState::call(std::size_t pc) {
+    this->call_stack.push(this->pc);
+    this->pc = pc;
+  }
+
+  void GCodeRuntimeState::ret() {
+    if (this->call_stack.empty()) {
+      throw GCodeRuntimeError("Call stack undeflow");
+    }
+    this->pc = this->call_stack.top();
+    this->call_stack.pop();
+  }
+
   void GCodeRuntimeState::push(const GCodeRuntimeValue &value) {
     this->stack.push(value);
   }
@@ -177,6 +190,15 @@ namespace GCodeLib {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
     this->push(v1.asInteger() ^ v2.asInteger());
+  }
+
+  void GCodeRuntimeState::inot() {
+    GCodeRuntimeValue v = this->pop();
+    if (v.asInteger() != 0) {
+      this->push(GCodeFalse);
+    } else {
+      this->push(GCodeTrue);
+    }
   }
 
   bool GCodeFunctionScope::hasFunction(const std::string &key) {

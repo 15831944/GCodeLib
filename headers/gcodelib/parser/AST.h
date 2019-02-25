@@ -21,7 +21,11 @@ namespace GCodeLib {
       FunctionCall,
       Word,
       Command,
-      Block
+      Block,
+      ProcedureDefinition,
+      ProcedureCall,
+      Conditional,
+      WhileLoop
     };
 
     class Visitor;
@@ -159,6 +163,62 @@ namespace GCodeLib {
     std::vector<std::unique_ptr<GCodeNode>> content;
   };
 
+  class GCodeProcedureDefinition : public GCodeNode {
+   public:
+    GCodeProcedureDefinition(int64_t, std::unique_ptr<GCodeNode>, std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
+    int64_t getIdentifier() const;
+    GCodeNode &getBody() const;
+    void getReturnValues(std::vector<std::reference_wrapper<GCodeNode>> &) const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    int64_t identifier;
+    std::unique_ptr<GCodeNode> body;
+    std::vector<std::unique_ptr<GCodeNode>> retValues;
+  };
+
+  class GCodeProcedureCall : public GCodeNode {
+   public:
+    GCodeProcedureCall(std::unique_ptr<GCodeNode>, std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
+    GCodeNode &getProcedureId() const;
+    void getArguments(std::vector<std::reference_wrapper<GCodeNode>> &) const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    std::unique_ptr<GCodeNode> procedureId;
+    std::vector<std::unique_ptr<GCodeNode>> args;
+  };
+
+  class GCodeConditional : public GCodeNode {
+   public:
+    GCodeConditional(std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);
+    GCodeNode &getCondition() const;
+    GCodeNode &getThenBody() const;
+    GCodeNode *getElseBody() const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    std::unique_ptr<GCodeNode> condition;
+    std::unique_ptr<GCodeNode> thenBody;
+    std::unique_ptr<GCodeNode> elseBody;
+  };
+
+  class GCodeWhileLoop : public GCodeNode {
+   public:
+    GCodeWhileLoop(std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);
+    GCodeNode &getCondition() const;
+    GCodeNode &getBody() const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    std::unique_ptr<GCodeNode> condition;
+    std::unique_ptr<GCodeNode> body;
+  };
+
   class GCodeNode::Visitor {
    public:
     virtual ~Visitor() = default;
@@ -169,6 +229,10 @@ namespace GCodeLib {
     virtual void visit(const GCodeWord &) {}
     virtual void visit(const GCodeCommand &) {}
     virtual void visit(const GCodeBlock &) {}
+    virtual void visit(const GCodeProcedureDefinition &) {}
+    virtual void visit(const GCodeProcedureCall &) {}
+    virtual void visit(const GCodeConditional &) {}
+    virtual void visit(const GCodeWhileLoop &) {}
   };
 }
 

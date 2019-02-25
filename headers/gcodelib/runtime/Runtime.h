@@ -15,6 +15,8 @@ namespace GCodeLib {
     std::size_t getPC() const;
     std::size_t nextPC();
     void jump(std::size_t);
+    void call(std::size_t);
+    void ret();
 
     void push(const GCodeRuntimeValue &);
     GCodeRuntimeValue pop();
@@ -34,8 +36,10 @@ namespace GCodeLib {
     void iand();
     void ior();
     void ixor();
+    void inot();
    private:
     std::stack<GCodeRuntimeValue> stack;
+    std::stack<std::size_t> call_stack;
     std::size_t pc;
   };
 

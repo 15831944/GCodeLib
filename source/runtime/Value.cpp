@@ -14,6 +14,15 @@ namespace GCodeLib {
   GCodeRuntimeValue::GCodeRuntimeValue(double value)
     : type(Type::Float), value(value) {}
 
+  GCodeRuntimeValue::GCodeRuntimeValue(const GCodeRuntimeValue &value)
+    : type(value.type), value(value.value) {}
+
+  GCodeRuntimeValue &GCodeRuntimeValue::operator=(const GCodeRuntimeValue &value) {
+    this->type = value.type;
+    this->value = value.value;
+    return *this;
+  }
+
   GCodeRuntimeValue::Type GCodeRuntimeValue::getType() const {
     return this->type;
   }

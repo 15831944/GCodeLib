@@ -1,5 +1,7 @@
 #include "gcodelib/parser/Parser.h"
 #include "gcodelib/parser/Error.h"
+#include <algorithm>
+#include <iostream>
 
 namespace GCodeLib  {
 
@@ -68,6 +70,7 @@ namespace GCodeLib  {
     : scanner(std::make_unique<FilteredScanner>(scanner)) {
     this->tokens[0] = this->scanner->next();
     this->tokens[1] = this->scanner->next();
+    this->tokens[2] = this->scanner->next();
   }
 
   std::unique_ptr<GCodeBlock> GCodeParser::parse() {
@@ -84,7 +87,8 @@ namespace GCodeLib  {
 
   void GCodeParser::shift() {
     this->tokens[0] = std::move(this->tokens[1]);
-    this->tokens[1] = this->scanner->next();
+    this->tokens[1] = this->tokens[2];
+    this->tokens[2] = this->scanner->next();
   }
 
   std::optional<SourcePosition> GCodeParser::position() {
@@ -122,6 +126,11 @@ namespace GCodeLib  {
       this->tokenAt(idx).getKeyword() == kw;
   }
 
+  bool GCodeParser::expectInteger(int64_t value, std::size_t idx) {
+    return this->expectToken(GCodeToken::Type::IntegerContant, idx) &&
+      this->tokenAt(idx).getInteger() == value;
+  }
+
   void GCodeParser::assert(bool (GCodeParser::*assertion)(), const std::string &message) {
     if (!(this->*assertion)()) {
       this->error(message);
@@ -139,6 +148,8 @@ namespace GCodeLib  {
       auto stmt = this->nextStatement();
       if (stmt) {
         block.push_back(std::move(stmt));
+      } else {
+        break;
       }
     }
     return std::make_unique<GCodeBlock>(std::move(block), position.value());
@@ -146,6 +157,8 @@ namespace GCodeLib  {
    
   bool GCodeParser::checkStatement() {
     return this->checkCommand() ||
+      this->checkFlowCommand() ||
+      this->checkProcedureCall() ||
       this->expectToken(GCodeToken::Type::NewLine);
   }
 
@@ -161,9 +174,171 @@ namespace GCodeLib  {
         }
       }
       return nullptr;
+    } else if (this->checkFlowCommand()) {
+      return this->nextFlowCommand();
+    } else if (this->checkProcedureCall()) {
+      return this->nextProcedureCall();
     } else {
       return this->nextCommand();
     }
+  }
+
+  bool GCodeParser::checkFlowCommand() {
+    return this->expectOperator(GCodeOperator::O) &&
+      this->expectToken(GCodeToken::Type::IntegerContant, 1) &&
+      (this->expectKeyword(GCodeKeyword::Sub, 2) ||
+      this->expectKeyword(GCodeKeyword::If, 2) ||
+      this->expectKeyword(GCodeKeyword::While, 2));
+  }
+
+  bool GCodeParser::checkFlowCommandFinalizer() {
+    return this->expectOperator(GCodeOperator::O) &&
+      this->expectToken(GCodeToken::Type::IntegerContant, 1) &&
+      (this->expectKeyword(GCodeKeyword::Endsub, 2) ||
+      this->expectKeyword(GCodeKeyword::Elseif, 2) ||
+      this->expectKeyword(GCodeKeyword::Else, 2) ||
+      this->expectKeyword(GCodeKeyword::Endif, 2) ||
+      this->expectKeyword(GCodeKeyword::Endwhile, 2));
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextFlowCommand() {
+    this->assert(&GCodeParser::checkFlowCommand, "Flow command expected");
+    this->shift();
+    if (!this->expectToken(GCodeToken::Type::IntegerContant)) {
+      this->error("Integer constant expected");
+    }
+    int64_t id = this->tokenAt().getInteger();
+    this->shift();
+    if (this->checkProcedure()) {
+      return this->nextProcedure(id);
+    } else if (this->checkConditional()) {
+      return this->nextConditional(id);
+    } else if (this->checkWhileLoop()) {
+      return this->nextWhileLoop(id);
+    } else {
+      this->error("Unknown flow command");
+    }
+  }
+
+  bool GCodeParser::checkConditional() {
+    return this->expectKeyword(GCodeKeyword::If);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextConditional(int64_t id) {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkConditional, "Conditional statement expected");
+    this->shift();
+    std::unique_ptr<GCodeNode> condition = this->nextExpression();
+    std::unique_ptr<GCodeNode> body = this->nextBlock();
+    std::vector<std::tuple<std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, SourcePosition>> ifBlocks;
+    ifBlocks.push_back(std::make_tuple(std::move(condition), std::move(body), position.value()));
+    while (this->expectOperator(GCodeOperator::O) &&
+      this->expectInteger(id, 1) &&
+      this->expectKeyword(GCodeKeyword::Elseif, 2)) {
+      position = this->position();
+      this->shift();
+      this->shift();
+      this->shift();
+      std::unique_ptr<GCodeNode> elifCondition = this->nextExpression();
+      std::unique_ptr<GCodeNode> elifBody = this->nextBlock();
+      ifBlocks.push_back(std::make_tuple(std::move(elifCondition), std::move(elifBody), position.value()));
+    }
+    std::reverse(ifBlocks.begin(), ifBlocks.end());
+    std::unique_ptr<GCodeNode> elseBody = nullptr;
+    if (this->expectOperator(GCodeOperator::O) &&
+      this->expectInteger(id, 1) &&
+      this->expectKeyword(GCodeKeyword::Else, 2)) {
+      this->shift();
+      this->shift();
+      this->shift();
+      elseBody = this->nextBlock();
+    }
+    if (!(this->expectOperator(GCodeOperator::O) &&
+      this->expectInteger(id, 1) &&
+      this->expectKeyword(GCodeKeyword::Endif, 2))) {
+      this->error("Expected \'endif\'");
+    }
+    this->shift();
+    this->shift();
+    this->shift();
+    condition = std::move(std::get<0>(ifBlocks.at(0)));
+    body = std::move(std::get<1>(ifBlocks.at(0)));
+    std::unique_ptr<GCodeNode> node = std::make_unique<GCodeConditional>(std::move(condition), std::move(body), std::move(elseBody), std::get<2>(ifBlocks.at(0)));
+    for (std::size_t i = 1; i < ifBlocks.size(); i++) {
+      condition = std::move(std::get<0>(ifBlocks.at(i)));
+      body = std::move(std::get<1>(ifBlocks.at(i)));
+      node = std::make_unique<GCodeConditional>(std::move(condition), std::move(body), std::move(node), std::get<2>(ifBlocks.at(i)));
+    }
+    return node;
+  }
+
+  bool GCodeParser::checkWhileLoop() {
+    return this->expectKeyword(GCodeKeyword::While);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextWhileLoop(int64_t id) {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkWhileLoop, "Expected while loop");
+    this->shift();
+    std::unique_ptr<GCodeNode> conditional = this->nextExpression();
+    std::unique_ptr<GCodeNode> body = this->nextBlock();
+    if (!(this->expectOperator(GCodeOperator::O) &&
+      this->expectInteger(id, 1) &&
+      this->expectKeyword(GCodeKeyword::Endwhile, 2))) {
+      this->error("\'endwhile\' expected");
+    }
+    this->shift();
+    this->shift();
+    this->shift();
+    return std::make_unique<GCodeWhileLoop>(std::move(conditional), std::move(body), position.value());
+  }
+
+  bool GCodeParser::checkProcedure() {
+    return this->expectKeyword(GCodeKeyword::Sub);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextProcedure(int64_t pid) {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkProcedure, "Procedure definition expected");
+    this->shift();
+    std::unique_ptr<GCodeNode> body = this->nextBlock();
+    if (!this->expectOperator(GCodeOperator::O) ||
+      !this->expectInteger(pid, 1)) {
+      this->error("Procedure close command expected");
+    }
+    this->shift();
+    this->shift();
+    if (!this->expectKeyword(GCodeKeyword::Endsub)) {
+      this->error("\'endsub\' expected");
+    }
+    this->shift();
+    std::vector<std::unique_ptr<GCodeNode>> rets;
+    while (this->checkExpression()) {
+      rets.push_back(this->nextExpression());
+    }
+    return std::make_unique<GCodeProcedureDefinition>(pid, std::move(body), std::move(rets), position.value());
+  }
+  
+  bool GCodeParser::checkProcedureCall() {
+    return this->expectOperator(GCodeOperator::O) &&
+      !this->checkFlowCommand() &&
+      !this->checkFlowCommandFinalizer();
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextProcedureCall() {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkProcedureCall, "Expected procedure call");
+    this->shift();
+    std::unique_ptr<GCodeNode> pid = this->nextAtom();
+    if (!this->expectKeyword(GCodeKeyword::Call)) {
+      return nullptr;
+    }
+    this->shift();
+    std::vector<std::unique_ptr<GCodeNode>> args;
+    while (this->checkExpression()) {
+      args.push_back(this->nextExpression());
+    }
+    return std::make_unique<GCodeProcedureCall>(std::move(pid), std::move(args), position.value());
   }
 
   bool GCodeParser::checkCommand() {

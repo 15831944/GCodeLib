@@ -58,7 +58,16 @@ namespace GCodeLib {
     And,
     Or,
     Xor,
-    None
+    None,
+    Sub,
+    Endsub,
+    Call,
+    If,
+    Elseif,
+    Else,
+    Endif,
+    While,
+    Endwhile
   };
 
   class GCodeToken {

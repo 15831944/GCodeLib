@@ -26,12 +26,24 @@ namespace GCodeLib {
     bool expectOperator(GCodeOperator, std::size_t = 0);
     bool expectOperators(const std::set<GCodeOperator> &, std::size_t = 0);
     bool expectKeyword(GCodeKeyword, std::size_t = 0);
+    bool expectInteger(int64_t, std::size_t = 0);
     void assert(bool (GCodeParser::*)(), const std::string &);
 
     bool checkBlock();
     std::unique_ptr<GCodeBlock> nextBlock();
     bool checkStatement();
     std::unique_ptr<GCodeNode> nextStatement();
+    bool checkFlowCommand();
+    bool checkFlowCommandFinalizer();
+    std::unique_ptr<GCodeNode> nextFlowCommand();
+    bool checkConditional();
+    std::unique_ptr<GCodeNode> nextConditional(int64_t);
+    bool checkWhileLoop();
+    std::unique_ptr<GCodeNode> nextWhileLoop(int64_t);
+    bool checkProcedure();
+    std::unique_ptr<GCodeNode> nextProcedure(int64_t);
+    bool checkProcedureCall();
+    std::unique_ptr<GCodeNode> nextProcedureCall();
     bool checkCommand();
     std::unique_ptr<GCodeCommand> nextCommand();
     bool checkCommandWord();
@@ -60,7 +72,7 @@ namespace GCodeLib {
     std::unique_ptr<GCodeConstantValue> nextConstant();
 
     std::shared_ptr<GCodeParser::FilteredScanner> scanner;
-    std::optional<GCodeToken> tokens[2];
+    std::optional<GCodeToken> tokens[3];
   };
 }
 
