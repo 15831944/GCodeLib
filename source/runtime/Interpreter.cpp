@@ -44,6 +44,8 @@ namespace GCodeLib {
     this->work = true;
     this->stack.push(GCodeRuntimeState());
     GCodeRuntimeState &frame = this->getFrame();
+    GCodeVariableScope<int64_t> numberedVariables;
+    GCodeVariableScope<std::string> namedVariables;
     GCodeVariableScope<unsigned char> args;
     while (this->work && frame.getPC() < this->module.length()) {
       const GCodeIRInstruction &instr = this->module.at(frame.nextPC());
@@ -77,9 +79,17 @@ namespace GCodeLib {
         case GCodeIROpcode::Call: {
           int64_t pid = frame.pop().asInteger();
           frame.call(this->module.getProcedure(pid).getAddress());
+          std::size_t argc = static_cast<std::size_t>(instr.getValue().getInteger());
+          while (argc-- > 0) {
+            numberedVariables.put(argc, frame.pop());
+          }
         } break;
         case GCodeIROpcode::Ret: {
           frame.ret();
+          std::size_t argc = static_cast<std::size_t>(instr.getValue().getInteger());
+          while (argc-- > 0) {
+            numberedVariables.put(argc, frame.pop());
+          }
         } break;
         case GCodeIROpcode::Negate:
           frame.negate();
@@ -129,6 +139,24 @@ namespace GCodeLib {
             args.push_back(frame.pop());
           }
           frame.push(this->functions.invoke(functionId, args));
+        } break;
+        case GCodeIROpcode::LoadNumbered: {
+          const GCodeRuntimeValue &value = numberedVariables.get(instr.getValue().getInteger());
+          frame.push(value);
+        } break;
+        case GCodeIROpcode::LoadNamed: {
+          const std::string &symbol = this->module.getSymbol(static_cast<std::size_t>(instr.getValue().getInteger()));
+          const GCodeRuntimeValue &value = namedVariables.get(symbol);
+          frame.push(value);
+        } break;
+        case GCodeIROpcode::StoreNumbered: {
+          GCodeRuntimeValue value = frame.pop();
+          numberedVariables.put(instr.getValue().getInteger(), value);
+        } break;
+        case GCodeIROpcode::StoreNamed: {
+          GCodeRuntimeValue value = frame.pop();
+          const std::string &symbol = this->module.getSymbol(static_cast<std::size_t>(instr.getValue().getInteger()));
+          namedVariables.put(symbol, value);
         } break;
       }
     }

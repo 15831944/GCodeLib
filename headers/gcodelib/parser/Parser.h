@@ -33,6 +33,8 @@ namespace GCodeLib {
     std::unique_ptr<GCodeBlock> nextBlock();
     bool checkStatement();
     std::unique_ptr<GCodeNode> nextStatement();
+    bool checkAssignment();
+    std::unique_ptr<GCodeNode> nextAssignment();
     bool checkFlowCommand();
     bool checkFlowCommandFinalizer();
     std::unique_ptr<GCodeNode> nextFlowCommand();
@@ -44,6 +46,8 @@ namespace GCodeLib {
     std::unique_ptr<GCodeNode> nextProcedure(int64_t);
     bool checkProcedureCall();
     std::unique_ptr<GCodeNode> nextProcedureCall();
+    bool checkProcedureReturn();
+    std::unique_ptr<GCodeNode> nextProcedureReturn();
     bool checkCommand();
     std::unique_ptr<GCodeCommand> nextCommand();
     bool checkCommandWord();
@@ -68,6 +72,8 @@ namespace GCodeLib {
     std::unique_ptr<GCodeNode> nextAtom();
     bool checkIdentifier();
     std::unique_ptr<GCodeNode> nextIdentifier();
+    bool checkVariable();
+    std::unique_ptr<GCodeNode> nextVariable();
     bool checkConstant();
     std::unique_ptr<GCodeConstantValue> nextConstant();
 

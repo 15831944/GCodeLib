@@ -15,6 +15,8 @@ namespace GCodeLib {
     enum class Type {
       IntegerContant,
       FloatContant,
+      NumberedVariable,
+      NamedVariable,
       UnaryOperation,
       BinaryOperation,
       FunctionCall,
@@ -25,6 +27,8 @@ namespace GCodeLib {
       ProcedureDefinition,
       ProcedureReturn,
       ProcedureCall,
+      NumberedAssignment,
+      NamedAssignment,
       Conditional,
       WhileLoop
     };
@@ -58,6 +62,75 @@ namespace GCodeLib {
     void dump(std::ostream &) const override;
    private:
     std::variant<int64_t, double> value;
+  };
+
+  template <GCodeNode::Type NodeType, typename ValueType>
+  class GCodeVariable : public GCodeNode {
+   public:
+    GCodeVariable(const ValueType &identifier, const SourcePosition &position)
+      : GCodeNode::GCodeNode(NodeType, position), identifier(identifier) {}
+
+    const ValueType &getIdentifier() const {
+      return this->identifier;
+    }
+   private:
+    ValueType identifier;
+  };
+
+  class GCodeNamedVariable;
+  class GCodeNumberedVariable;
+
+  class GCodeNamedVariable : public GCodeVariable<GCodeNode::Type::NamedVariable, std::string> {
+   public:
+    using GCodeVariable<GCodeNode::Type::NamedVariable, std::string>::GCodeVariable;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+  };
+
+  class GCodeNumberedVariable : public GCodeVariable<GCodeNode::Type::NumberedVariable, int64_t> {
+   public:
+    using GCodeVariable<GCodeNode::Type::NumberedVariable, int64_t>::GCodeVariable;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+  };
+
+  template <GCodeNode::Type NodeType, typename KeyType>
+  class GCodeVariableAssignment : public GCodeNode {
+   public:
+    GCodeVariableAssignment(const KeyType &key, std::unique_ptr<GCodeNode> value, const SourcePosition &position)
+      : GCodeNode::GCodeNode(NodeType, position), key(key), value(std::move(value)) {}
+    
+    const KeyType &getIdentifier() const {
+      return this->key;
+    }
+
+    GCodeNode &getValue() const {
+      return *this->value;
+    }
+   private:
+    KeyType key;
+    std::unique_ptr<GCodeNode> value;
+  };
+
+  class GCodeNamedVariableAssignment;
+  class GCodeNumberedVariableAssignment;
+
+  class GCodeNamedVariableAssignment : public GCodeVariableAssignment<GCodeNode::Type::NamedAssignment, std::string> {
+   public:
+    using GCodeVariableAssignment<GCodeNode::Type::NamedAssignment, std::string>::GCodeVariableAssignment;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+  };
+
+  class GCodeNumberedVariableAssignment : public GCodeVariableAssignment<GCodeNode::Type::NumberedAssignment, int64_t> {
+   public:
+    using GCodeVariableAssignment<GCodeNode::Type::NumberedAssignment, int64_t>::GCodeVariableAssignment;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
   };
 
   class GCodeUnaryOperation : public GCodeNode {
@@ -244,6 +317,8 @@ namespace GCodeLib {
    public:
     virtual ~Visitor() = default;
     virtual void visit(const GCodeConstantValue &) {}
+    virtual void visit(const GCodeNamedVariable &) {}
+    virtual void visit(const GCodeNumberedVariable &) {}
     virtual void visit(const GCodeUnaryOperation &) {}
     virtual void visit(const GCodeBinaryOperation &) {}
     virtual void visit(const GCodeFunctionCall &) {}
@@ -256,6 +331,8 @@ namespace GCodeLib {
     virtual void visit(const GCodeProcedureCall &) {}
     virtual void visit(const GCodeConditional &) {}
     virtual void visit(const GCodeWhileLoop &) {}
+    virtual void visit(const GCodeNumberedVariableAssignment &) {}
+    virtual void visit(const GCodeNamedVariableAssignment &) {}
   };
 }
 

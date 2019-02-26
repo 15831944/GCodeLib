@@ -21,6 +21,10 @@ namespace GCodeLib {
     JumpIf,
     Call,
     Ret,
+    LoadNumbered,
+    StoreNumbered,
+    LoadNamed,
+    StoreNamed,
 
     Negate,
     Add,

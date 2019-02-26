@@ -34,7 +34,7 @@ namespace GCodeLib {
   static std::regex Integer(R"(^[0-9]+)");
   static std::regex Float(R"(^[0-9]+\.[0-9]+)");
   static std::regex Literal(R"(^[a-zA-Z_]{2,}[\w_]*)");
-  static std::regex Operator(R"(^[A-DF-MO-Z\+\-*/%\[\]])", std::regex_constants::ECMAScript | std::regex_constants::icase);
+  static std::regex Operator(R"(^[A-DF-MO-Z\+\-*/%\[\]#\=])", std::regex_constants::ECMAScript | std::regex_constants::icase);
   static std::regex Comment(R"(^;.*$)");
   static std::regex BracedComment(R"(^\([^\)]*\))");
   static std::regex LineNumber(R"(N\s*[0-9]+(\.[0-9]*)?)", std::regex_constants::ECMAScript | std::regex_constants::icase);

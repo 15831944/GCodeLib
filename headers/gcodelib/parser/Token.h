@@ -42,6 +42,8 @@ namespace GCodeLib {
     Star = '*',
     Slash = '/',
     Percent = '%',
+    Hash = '#',
+    Equal = '=',
     OpeningBracket = '[',
     ClosingBracket = ']',
     None = '\0'

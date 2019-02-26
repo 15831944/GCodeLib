@@ -17,6 +17,11 @@ namespace GCodeLib {
     void visit(const GCodeWhileLoop &) override;
     void visit(const GCodeConstantValue &) override;
     void visit(const GCodeLabel &) override;
+    void visit(const GCodeNumberedVariable &) override;
+    void visit(const GCodeNamedVariable &) override;
+    void visit(const GCodeNumberedVariableAssignment &) override;
+    void visit(const GCodeNamedVariableAssignment &) override;
+    void visit(const GCodeProcedureReturn &) override;
    private:
     std::unique_ptr<GCodeIRModule> module;
   };
@@ -140,19 +145,23 @@ namespace GCodeLib {
     auto &proc = this->module->getProcedure(definition.getIdentifier());
     proc.bind();
     definition.getBody().visit(*this);
-    // std::vector<std::reference_wrapper<GCodeNode>> rets;
-    // definition.getReturnValues(rets);
-    // std::reverse(rets.begin(), rets.end());
-    // for (auto ret : rets) {
-    //   ret.get().visit(*this);
-    // }
-    this->module->appendInstruction(GCodeIROpcode::Ret);
+    std::vector<std::reference_wrapper<GCodeNode>> rets;
+    definition.getReturnValues(rets);
+    for (auto ret : rets) {
+      ret.get().visit(*this);
+    }
+    this->module->appendInstruction(GCodeIROpcode::Ret, static_cast<int64_t>(rets.size()));
     label->bind();
   }
 
   void GCodeIRTranslator::Impl::visit(const GCodeProcedureCall &call) {
+    std::vector<std::reference_wrapper<GCodeNode>> args;
+    call.getArguments(args);
+    for (auto arg : args) {
+      arg.get().visit(*this);
+    }
     call.getProcedureId().visit(*this);
-    this->module->appendInstruction(GCodeIROpcode::Call);
+    this->module->appendInstruction(GCodeIROpcode::Call, static_cast<int64_t>(args.size()));
   }
 
   void GCodeIRTranslator::Impl::visit(const GCodeConditional &conditional) {
@@ -194,5 +203,34 @@ namespace GCodeLib {
 
   void GCodeIRTranslator::Impl::visit(const GCodeLabel &label) {
     label.getStatement().visit(*this);
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeNumberedVariable &variable) {
+    this->module->appendInstruction(GCodeIROpcode::LoadNumbered, variable.getIdentifier());
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeNamedVariable &variable) {
+    int64_t symbol = this->module->getSymbolId(variable.getIdentifier());
+    this->module->appendInstruction(GCodeIROpcode::LoadNamed, symbol);
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeNumberedVariableAssignment &assignment) {
+    assignment.getValue().visit(*this);
+    this->module->appendInstruction(GCodeIROpcode::StoreNumbered, assignment.getIdentifier());
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeNamedVariableAssignment &assignment) {
+    assignment.getValue().visit(*this);
+    int64_t symbol = this->module->getSymbolId(assignment.getIdentifier());
+    this->module->appendInstruction(GCodeIROpcode::StoreNamed, symbol);
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeProcedureReturn &ret) {
+    std::vector<std::reference_wrapper<GCodeNode>> rets;
+    ret.getReturnValues(rets);
+    for (auto value : rets) {
+      value.get().visit(*this);
+    }
+    this->module->appendInstruction(GCodeIROpcode::Ret, static_cast<int64_t>(rets.size()));
   }
 }

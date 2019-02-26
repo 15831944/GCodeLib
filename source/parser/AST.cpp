@@ -60,6 +60,38 @@ namespace GCodeLib {
     }
   }
 
+  void GCodeNamedVariable::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeNamedVariable::dump(std::ostream &os) const {
+    os << '#' << this->getIdentifier();
+  }
+
+  void GCodeNumberedVariable::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeNumberedVariable::dump(std::ostream &os) const {
+    os << '#' << this->getIdentifier();
+  }
+
+  void GCodeNamedVariableAssignment::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeNamedVariableAssignment::dump(std::ostream &os) const {
+    os << '#' << this->getIdentifier() << " = " << this->getValue();
+  }
+
+  void GCodeNumberedVariableAssignment::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeNumberedVariableAssignment::dump(std::ostream &os) const {
+    os << '#' << this->getIdentifier() << " = " << this->getValue();
+  }
+
   GCodeUnaryOperation::GCodeUnaryOperation(Operation operation, std::unique_ptr<GCodeNode> argument, const SourcePosition &position)
     : GCodeNode::GCodeNode(Type::UnaryOperation, position), operation(operation), argument(std::move(argument)) {}
   

@@ -159,6 +159,7 @@ namespace GCodeLib  {
     return this->checkCommand() ||
       this->checkFlowCommand() ||
       this->checkProcedureCall() ||
+      this->checkAssignment() ||
       this->expectToken(GCodeToken::Type::NewLine);
   }
 
@@ -177,8 +178,40 @@ namespace GCodeLib  {
       return this->nextFlowCommand();
     } else if (this->checkProcedureCall()) {
       return this->nextProcedureCall();
+    } else if (this->checkAssignment()) {
+      return this->nextAssignment();
     } else {
       return this->nextCommand();
+    }
+  }
+
+  bool GCodeParser::checkAssignment() {
+    return this->expectOperator(GCodeOperator::Hash);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextAssignment() {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkAssignment, "Assignment expected");
+    this->shift();
+    std::variant<int64_t, std::string> key;
+    if (this->expectToken(GCodeToken::Type::IntegerContant)) {
+      key = this->tokenAt().getInteger();
+      this->shift();
+    } else if (this->expectToken(GCodeToken::Type::Literal)) {
+      key = this->tokenAt().getLiteral();
+      this->shift();
+    } else {
+      this->error("Expected numbered or named variable reference");
+    }
+    if (!this->expectOperator(GCodeOperator::Equal)) {
+      this->error("\'=\' expected");
+    }
+    this->shift();
+    std::unique_ptr<GCodeNode> value = this->nextLogical();
+    if (key.index() == 0) {
+      return std::make_unique<GCodeNumberedVariableAssignment>(std::get<0>(key), std::move(value), position.value());
+    } else {
+      return std::make_unique<GCodeNamedVariableAssignment>(std::get<1>(key), std::move(value), position.value());
     }
   }
 
@@ -187,7 +220,8 @@ namespace GCodeLib  {
       this->expectToken(GCodeToken::Type::IntegerContant, 1) &&
       (this->expectKeyword(GCodeKeyword::Sub, 2) ||
       this->expectKeyword(GCodeKeyword::If, 2) ||
-      this->expectKeyword(GCodeKeyword::While, 2));
+      this->expectKeyword(GCodeKeyword::While, 2) ||
+      this->expectKeyword(GCodeKeyword::Return, 2));
   }
 
   bool GCodeParser::checkFlowCommandFinalizer() {
@@ -214,9 +248,26 @@ namespace GCodeLib  {
       return this->nextConditional(id);
     } else if (this->checkWhileLoop()) {
       return this->nextWhileLoop(id);
+    } else if (this->checkProcedureReturn()) {
+      return this->nextProcedureReturn();
     } else {
       this->error("Unknown flow command");
     }
+  }
+
+  bool GCodeParser::checkProcedureReturn() {
+    return this->expectKeyword(GCodeKeyword::Return);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextProcedureReturn() {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkProcedureReturn, "Expected return statement");
+    this->shift();
+    std::vector<std::unique_ptr<GCodeNode>> values;
+    while (this->checkExpression()) {
+      values.push_back(this->nextExpression());
+    }
+    return std::make_unique<GCodeProcedureReturn>(std::move(values), position.value());
   }
 
   bool GCodeParser::checkConditional() {
@@ -312,8 +363,8 @@ namespace GCodeLib  {
     }
     this->shift();
     std::vector<std::unique_ptr<GCodeNode>> rets;
-    while (this->checkExpression()) {
-      rets.push_back(this->nextExpression());
+    while (this->checkAtom()) {
+      rets.push_back(this->nextAtom());
     }
     return std::make_unique<GCodeProcedureDefinition>(pid, std::move(body), std::move(rets), position.value());
   }
@@ -334,8 +385,8 @@ namespace GCodeLib  {
     }
     this->shift();
     std::vector<std::unique_ptr<GCodeNode>> args;
-    while (this->checkExpression()) {
-      args.push_back(this->nextExpression());
+    while (this->checkAtom()) {
+      args.push_back(this->nextAtom());
     }
     return std::make_unique<GCodeProcedureCall>(std::move(pid), std::move(args), position.value());
   }
@@ -550,6 +601,7 @@ namespace GCodeLib  {
     return this->checkConstant() ||
       this->checkExpression() ||
       this->checkIdentifier() ||
+      this->checkVariable() ||
       this->expectOperator(GCodeOperator::Plus) ||
       this->expectOperator(GCodeOperator::Minus);
   }
@@ -563,6 +615,8 @@ namespace GCodeLib  {
       return this->nextExpression();
     } else if (this->checkIdentifier()) {
       return this->nextIdentifier();
+    } else if (this->checkVariable()) {
+      return this->nextVariable();
     } else {
       GCodeOperator oper = this->tokenAt().getOperator();
       this->shift();
@@ -597,6 +651,27 @@ namespace GCodeLib  {
     }
     this->shift();
     return std::make_unique<GCodeFunctionCall>(identifier, std::move(args), position.value());
+  }
+
+  bool GCodeParser::checkVariable() {
+    return this->expectOperator(GCodeOperator::Hash);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextVariable() {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkVariable, "Expected variable reference");
+    this->shift();
+    std::unique_ptr<GCodeNode> node;
+    if (this->expectToken(GCodeToken::Type::IntegerContant)) {
+      node = std::make_unique<GCodeNumberedVariable>(this->tokenAt().getInteger(), position.value());
+      this->shift();
+    } else if (this->expectToken(GCodeToken::Type::Literal)) {
+      node = std::make_unique<GCodeNamedVariable>(this->tokenAt().getLiteral(), position.value());
+      this->shift();
+    } else {
+      this->error("Expected named or numbered variable reference");
+    }
+    return node;
   }
 
   bool GCodeParser::checkConstant() {
