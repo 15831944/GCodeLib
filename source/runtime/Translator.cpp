@@ -16,6 +16,7 @@ namespace GCodeLib {
     void visit(const GCodeConditional &) override;
     void visit(const GCodeWhileLoop &) override;
     void visit(const GCodeConstantValue &) override;
+    void visit(const GCodeLabel &) override;
    private:
     std::unique_ptr<GCodeIRModule> module;
   };
@@ -123,8 +124,8 @@ namespace GCodeLib {
 
   void GCodeIRTranslator::Impl::visit(const GCodeFunctionCall &call) {
     std::vector<std::reference_wrapper<GCodeNode>> args;
-    std::reverse(args.begin(), args.end());
     call.getArguments(args);
+    std::reverse(args.begin(), args.end());
     for (auto arg : args) {
       arg.get().visit(*this);
     }
@@ -189,5 +190,9 @@ namespace GCodeLib {
     } else if (value.is(GCodeNode::Type::FloatContant)) {
       this->module->appendInstruction(GCodeIROpcode::Push, GCodeRuntimeValue(value.asFloat()));
     }
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeLabel &label) {
+    label.getStatement().visit(*this);
   }
 }

@@ -7,7 +7,6 @@
 #include <vector>
 #include <variant>
 #include <iosfwd>
-#include <set>
 
 namespace GCodeLib {
 
@@ -20,9 +19,11 @@ namespace GCodeLib {
       BinaryOperation,
       FunctionCall,
       Word,
+      Label,
       Command,
       Block,
       ProcedureDefinition,
+      ProcedureReturn,
       ProcedureCall,
       Conditional,
       WhileLoop
@@ -35,9 +36,6 @@ namespace GCodeLib {
     Type getType() const;
     bool is(Type) const;
     const SourcePosition &getPosition() const;
-    const std::set<uint32_t> &getLabels() const;
-
-    void addLabel(uint32_t);
 
     virtual void visit(Visitor &) = 0;
     friend std::ostream &operator<<(std::ostream &, const GCodeNode &);
@@ -46,7 +44,6 @@ namespace GCodeLib {
    private:
     Type type;
     SourcePosition position;
-    std::set<uint32_t> labels;
   };
 
   class GCodeConstantValue : public GCodeNode {
@@ -111,6 +108,19 @@ namespace GCodeLib {
     Operation operation;
     std::unique_ptr<GCodeNode> leftArgument;
     std::unique_ptr<GCodeNode> rightArgument;
+  };
+
+  class GCodeLabel : public GCodeNode {
+   public:
+    GCodeLabel(int64_t, std::unique_ptr<GCodeNode>, const SourcePosition &);
+    int64_t getLabel() const;
+    GCodeNode &getStatement() const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    int64_t label;
+    std::unique_ptr<GCodeNode> statement;
   };
 
   class GCodeFunctionCall : public GCodeNode {
@@ -178,6 +188,17 @@ namespace GCodeLib {
     std::vector<std::unique_ptr<GCodeNode>> retValues;
   };
 
+  class GCodeProcedureReturn : public GCodeNode {
+   public:
+    GCodeProcedureReturn(std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
+    void getReturnValues(std::vector<std::reference_wrapper<GCodeNode>> &) const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    std::vector<std::unique_ptr<GCodeNode>> returnValues;
+  };
+
   class GCodeProcedureCall : public GCodeNode {
    public:
     GCodeProcedureCall(std::unique_ptr<GCodeNode>, std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
@@ -227,9 +248,11 @@ namespace GCodeLib {
     virtual void visit(const GCodeBinaryOperation &) {}
     virtual void visit(const GCodeFunctionCall &) {}
     virtual void visit(const GCodeWord &) {}
+    virtual void visit(const GCodeLabel &) {}
     virtual void visit(const GCodeCommand &) {}
     virtual void visit(const GCodeBlock &) {}
     virtual void visit(const GCodeProcedureDefinition &) {}
+    virtual void visit(const GCodeProcedureReturn &) {}
     virtual void visit(const GCodeProcedureCall &) {}
     virtual void visit(const GCodeConditional &) {}
     virtual void visit(const GCodeWhileLoop &) {}

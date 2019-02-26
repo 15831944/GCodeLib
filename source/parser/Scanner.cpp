@@ -20,6 +20,7 @@ namespace GCodeLib {
     { "XOR", GCodeKeyword::Xor },
     { "sub", GCodeKeyword::Sub },
     { "endsub", GCodeKeyword::Endsub },
+    { "return", GCodeKeyword::Return },
     { "call", GCodeKeyword::Call },
     { "if", GCodeKeyword::If },
     { "elseif", GCodeKeyword::Elseif },

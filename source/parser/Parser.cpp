@@ -169,8 +169,7 @@ namespace GCodeLib  {
       if (this->checkStatement()) {
         auto stmt = this->nextStatement();
         if (stmt) {
-          stmt->addLabel(position.value().getLine());
-          return stmt;
+          return std::make_unique<GCodeLabel>(position.value().getLine(), std::move(stmt), position.value());
         }
       }
       return nullptr;

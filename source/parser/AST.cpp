@@ -3,6 +3,13 @@
 
 namespace GCodeLib {
 
+  template <typename T>
+  static void copy_arguments(const std::vector<std::unique_ptr<T>> &source, std::vector<std::reference_wrapper<T>> &destination) {
+    for (const auto &element : source) {
+      destination.push_back(*element);
+    }
+  }
+
   GCodeNode::GCodeNode(Type type, const SourcePosition &position)
     : type(type), position(position) {}
 
@@ -12,14 +19,6 @@ namespace GCodeLib {
 
   bool GCodeNode::is(Type type) const {
     return this->type == type;
-  }
-
-  const std::set<uint32_t> &GCodeNode::getLabels() const {
-    return this->labels;
-  }
-
-  void GCodeNode::addLabel(uint32_t label) {
-    this->labels.insert(label);
   }
 
   std::ostream &operator<<(std::ostream &os, const GCodeNode &node) {
@@ -111,9 +110,7 @@ namespace GCodeLib {
   }
 
   void GCodeFunctionCall::getArguments(std::vector<std::reference_wrapper<GCodeNode>> &args) const {
-    for (auto &arg : this->arguments) {
-      args.push_back(std::ref(*arg));
-    }
+    copy_arguments(this->arguments, args);
   }
 
   void GCodeFunctionCall::visit(Visitor &v) {
@@ -150,6 +147,25 @@ namespace GCodeLib {
     os << this->field << this->getValue();
   }
 
+  GCodeLabel::GCodeLabel(int64_t label, std::unique_ptr<GCodeNode> stmt, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::Label, position), label(label), statement(std::move(stmt)) {}
+  
+  int64_t GCodeLabel::getLabel() const {
+    return this->label;
+  }
+
+  GCodeNode &GCodeLabel::getStatement() const {
+    return *this->statement;
+  }
+
+  void GCodeLabel::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeLabel::dump(std::ostream &os) const {
+    os << "[Label:" << this->label << ' ' << this->getStatement() << ']';
+  }
+
   GCodeCommand::GCodeCommand(std::unique_ptr<GCodeWord> command, std::vector<std::unique_ptr<GCodeWord>> parameters, const SourcePosition &position)
     : GCodeNode::GCodeNode(Type::Command, position), command(std::move(command)), parameters(std::move(parameters)) {}
 
@@ -158,9 +174,7 @@ namespace GCodeLib {
   }
 
   void GCodeCommand::getParameters(std::vector<std::reference_wrapper<GCodeWord>> &prms) const {
-    for (auto &param : this->parameters) {
-      prms.push_back(*param);
-    }
+    copy_arguments(this->parameters, prms);
   }
 
   void GCodeCommand::visit(Visitor &v) {
@@ -179,9 +193,7 @@ namespace GCodeLib {
     : GCodeNode::GCodeNode(Type::Block, position), content(std::move(content)) {}
   
   void GCodeBlock::getContent(std::vector<std::reference_wrapper<GCodeNode>> &content) const {
-    for (auto &cmd : this->content) {
-      content.push_back(*cmd);
-    }
+    copy_arguments(this->content, content);
   }
 
   void GCodeBlock::visit(Visitor &v) {
@@ -209,9 +221,7 @@ namespace GCodeLib {
   }
 
   void GCodeProcedureDefinition::getReturnValues(std::vector<std::reference_wrapper<GCodeNode>> &rets) const {
-    for (auto &ret : this->retValues) {
-      rets.push_back(std::ref(*ret));
-    }
+    copy_arguments(this->retValues, rets);
   }
 
   void GCodeProcedureDefinition::visit(Visitor &v) {
@@ -226,6 +236,25 @@ namespace GCodeLib {
     os << ']';
   }
 
+  GCodeProcedureReturn::GCodeProcedureReturn(std::vector<std::unique_ptr<GCodeNode>> retVals, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::ProcedureReturn, position), returnValues(std::move(retVals)) {}
+  
+  void GCodeProcedureReturn::getReturnValues(std::vector<std::reference_wrapper<GCodeNode>> &rets) const {
+    copy_arguments(this->returnValues, rets);
+  }
+
+  void GCodeProcedureReturn::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeProcedureReturn::dump(std::ostream &os) const {
+    os << "[return";
+    std::for_each(this->returnValues.begin(), this->returnValues.end(), [&](auto &value) {
+      os << ' ' << *value;
+    });
+    os << ']';
+  }
+
   GCodeProcedureCall::GCodeProcedureCall(std::unique_ptr<GCodeNode> pid, std::vector<std::unique_ptr<GCodeNode>> args, const SourcePosition &position)
     : GCodeNode::GCodeNode(Type::ProcedureCall, position), procedureId(std::move(pid)), args(std::move(args)) {}
   
@@ -234,9 +263,7 @@ namespace GCodeLib {
   }
 
   void GCodeProcedureCall::getArguments(std::vector<std::reference_wrapper<GCodeNode>> &args) const {
-    for (auto &arg : this->args) {
-      args.push_back(std::ref(*arg));
-    }
+    copy_arguments(this->args, args);
   }
 
   void GCodeProcedureCall::visit(Visitor &v) {
