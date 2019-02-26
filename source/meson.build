@@ -9,6 +9,7 @@ gcodelib_source = [
   'runtime/Interpreter.cpp',
   'runtime/IR.cpp',
   'runtime/Runtime.cpp',
+  'runtime/Storage.cpp',
   'runtime/Translator.cpp',
   'runtime/Value.cpp'
 ]

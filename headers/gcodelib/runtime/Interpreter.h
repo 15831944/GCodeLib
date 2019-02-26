@@ -16,7 +16,7 @@ namespace GCodeLib {
    protected:
     GCodeRuntimeState &getFrame();
 
-    virtual void syscall(GCodeSyscallType, const GCodeRuntimeValue &, const GCodeVariableScope<unsigned char> &) = 0;
+    virtual void syscall(GCodeSyscallType, const GCodeRuntimeValue &, const GCodeScopedDictionary<unsigned char> &) = 0;
 
     GCodeFunctionScope functions;
    private:

@@ -11,7 +11,7 @@ class TestInterpreter : public GCodeInterpreter {
  public:
   using GCodeInterpreter::GCodeInterpreter;
  protected:
-  void syscall(GCodeSyscallType type, const GCodeRuntimeValue &function, const GCodeVariableScope<unsigned char> &args) override {
+  void syscall(GCodeSyscallType type, const GCodeRuntimeValue &function, const GCodeScopedDictionary<unsigned char> &args) override {
     std::cout << static_cast<unsigned char>(type) << function << '\t';
     for (auto kv : args) {
       std::cout << kv.first << kv.second << ' ';

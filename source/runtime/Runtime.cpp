@@ -7,8 +7,15 @@ namespace GCodeLib {
   static const int64_t GCodeTrue = 1;
   static const int64_t GCodeFalse = 0;
 
-  GCodeRuntimeState::GCodeRuntimeState()
-    : pc(0) {}
+  GCodeRuntimeState::GCodeRuntimeState(GCodeVariableScope &system)
+    : pc(0) {
+    this->scopes.push(std::make_unique<GCodeCascadeVariableScope>(&system));
+    this->globalScope = this->scopes.top().get();
+  }
+
+  GCodeVariableScope &GCodeRuntimeState::getScope() {
+    return *this->scopes.top();
+  }
 
   std::size_t GCodeRuntimeState::getPC() const {
     return this->pc;
@@ -24,6 +31,7 @@ namespace GCodeLib {
 
   void GCodeRuntimeState::call(std::size_t pc) {
     this->call_stack.push(this->pc);
+    this->scopes.push(std::make_unique<GCodeCascadeVariableScope>(this->globalScope));
     this->pc = pc;
   }
 
@@ -33,6 +41,7 @@ namespace GCodeLib {
     }
     this->pc = this->call_stack.top();
     this->call_stack.pop();
+    this->scopes.pop();
   }
 
   void GCodeRuntimeState::push(const GCodeRuntimeValue &value) {
