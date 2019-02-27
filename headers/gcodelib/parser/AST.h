@@ -8,7 +8,7 @@
 #include <variant>
 #include <iosfwd>
 
-namespace GCodeLib {
+namespace GCodeLib::Parser {
 
   class GCodeNode {
    public:

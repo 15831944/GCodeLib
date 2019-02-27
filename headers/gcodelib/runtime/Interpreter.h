@@ -6,7 +6,7 @@
 #include <stack>
 #include <map>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   class GCodeInterpreter {
    public:

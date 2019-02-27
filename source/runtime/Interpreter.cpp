@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cmath>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   static GCodeFunctionScope::FnType wrap_math_function(double(*fn)(double)) {
     return [=](const std::vector<GCodeRuntimeValue> &args) {

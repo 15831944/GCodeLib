@@ -1,7 +1,7 @@
 #include "gcodelib/runtime/IR.h"
 #include <iostream>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   GCodeIRInstruction::GCodeIRInstruction(GCodeIROpcode opcode, const GCodeRuntimeValue &value)
     : opcode(opcode), value(value) {}

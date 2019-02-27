@@ -1,30 +1,30 @@
 #include "gcodelib/runtime/Translator.h"
 #include <algorithm>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
-  class GCodeIRTranslator::Impl : public GCodeNode::Visitor {
+  class GCodeIRTranslator::Impl : public Parser::GCodeNode::Visitor {
    public:
-    std::unique_ptr<GCodeIRModule> translate(const GCodeBlock &);
-    void visit(const GCodeBlock &) override;
-    void visit(const GCodeCommand &) override;
-    void visit(const GCodeUnaryOperation &) override;
-    void visit(const GCodeBinaryOperation &) override;
-    void visit(const GCodeFunctionCall &) override;
-    void visit(const GCodeProcedureDefinition &) override;
-    void visit(const GCodeProcedureCall &) override;
-    void visit(const GCodeConditional &) override;
-    void visit(const GCodeWhileLoop &) override;
-    void visit(const GCodeRepeatLoop &) override;
-    void visit(const GCodeConstantValue &) override;
-    void visit(const GCodeLabel &) override;
-    void visit(const GCodeNumberedVariable &) override;
-    void visit(const GCodeNamedVariable &) override;
-    void visit(const GCodeNumberedVariableAssignment &) override;
-    void visit(const GCodeNamedVariableAssignment &) override;
-    void visit(const GCodeProcedureReturn &) override;
-    void visit(const GCodeNamedStatement &) override;
-    void visit(const GCodeLoopControl &) override;
+    std::unique_ptr<GCodeIRModule> translate(const Parser::GCodeBlock &);
+    void visit(const Parser::GCodeBlock &) override;
+    void visit(const Parser::GCodeCommand &) override;
+    void visit(const Parser::GCodeUnaryOperation &) override;
+    void visit(const Parser::GCodeBinaryOperation &) override;
+    void visit(const Parser::GCodeFunctionCall &) override;
+    void visit(const Parser::GCodeProcedureDefinition &) override;
+    void visit(const Parser::GCodeProcedureCall &) override;
+    void visit(const Parser::GCodeConditional &) override;
+    void visit(const Parser::GCodeWhileLoop &) override;
+    void visit(const Parser::GCodeRepeatLoop &) override;
+    void visit(const Parser::GCodeConstantValue &) override;
+    void visit(const Parser::GCodeLabel &) override;
+    void visit(const Parser::GCodeNumberedVariable &) override;
+    void visit(const Parser::GCodeNamedVariable &) override;
+    void visit(const Parser::GCodeNumberedVariableAssignment &) override;
+    void visit(const Parser::GCodeNamedVariableAssignment &) override;
+    void visit(const Parser::GCodeProcedureReturn &) override;
+    void visit(const Parser::GCodeNamedStatement &) override;
+    void visit(const Parser::GCodeLoopControl &) override;
    private:
     std::unique_ptr<GCodeIRModule> module;
   };
@@ -32,28 +32,28 @@ namespace GCodeLib {
   GCodeIRTranslator::GCodeIRTranslator()
     : impl(std::make_shared<Impl>()) {}
 
-  std::unique_ptr<GCodeIRModule> GCodeIRTranslator::translate(const GCodeBlock &ast) {
+  std::unique_ptr<GCodeIRModule> GCodeIRTranslator::translate(const Parser::GCodeBlock &ast) {
     return this->impl->translate(ast);
   }
 
-  std::unique_ptr<GCodeIRModule> GCodeIRTranslator::Impl::translate(const GCodeBlock &ast) {
+  std::unique_ptr<GCodeIRModule> GCodeIRTranslator::Impl::translate(const Parser::GCodeBlock &ast) {
     this->module = std::make_unique<GCodeIRModule>();
     this->visit(ast);
     return std::move(this->module);
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeBlock &block) {
-    std::vector<std::reference_wrapper<GCodeNode>> content;
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeBlock &block) {
+    std::vector<std::reference_wrapper<Parser::GCodeNode>> content;
     block.getContent(content);
     for (auto node : content) {
       node.get().visit(*this);
     }
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeCommand &cmd) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeCommand &cmd) {
     this->module->appendInstruction(GCodeIROpcode::Prologue);
     GCodeSyscallType syscallType = static_cast<GCodeSyscallType>(cmd.getCommand().getField());
-    std::vector<std::reference_wrapper<GCodeWord>> paramList;
+    std::vector<std::reference_wrapper<Parser::GCodeWord>> paramList;
     cmd.getParameters(paramList);
     for (auto param : paramList) {
       param.get().getValue().visit(*this);
@@ -63,75 +63,75 @@ namespace GCodeLib {
     this->module->appendInstruction(GCodeIROpcode::Syscall, GCodeRuntimeValue(static_cast<int64_t>(syscallType)));
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeUnaryOperation &node) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeUnaryOperation &node) {
     node.getArgument().visit(*this);
     switch (node.getOperation()) {
-      case GCodeUnaryOperation::Operation::Negate:
+      case Parser::GCodeUnaryOperation::Operation::Negate:
         this->module->appendInstruction(GCodeIROpcode::Negate);
         break;
     }
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeBinaryOperation &node) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeBinaryOperation &node) {
     node.getLeftArgument().visit(*this);
     node.getRightArgument().visit(*this);
     switch (node.getOperation()) {
-      case GCodeBinaryOperation::Operation::Add:
+      case Parser::GCodeBinaryOperation::Operation::Add:
         this->module->appendInstruction(GCodeIROpcode::Add);
         break;
-      case GCodeBinaryOperation::Operation::Subtract:
+      case Parser::GCodeBinaryOperation::Operation::Subtract:
         this->module->appendInstruction(GCodeIROpcode::Subtract);
         break;
-      case GCodeBinaryOperation::Operation::Multiply:
+      case Parser::GCodeBinaryOperation::Operation::Multiply:
         this->module->appendInstruction(GCodeIROpcode::Multiply);
         break;
-      case GCodeBinaryOperation::Operation::Divide:
+      case Parser::GCodeBinaryOperation::Operation::Divide:
         this->module->appendInstruction(GCodeIROpcode::Divide);
         break;
-      case GCodeBinaryOperation::Operation::Power:
+      case Parser::GCodeBinaryOperation::Operation::Power:
         this->module->appendInstruction(GCodeIROpcode::Power);
         break;
-      case GCodeBinaryOperation::Operation::Modulo:
+      case Parser::GCodeBinaryOperation::Operation::Modulo:
         this->module->appendInstruction(GCodeIROpcode::Modulo);
         break;
-      case GCodeBinaryOperation::Operation::Equals:
+      case Parser::GCodeBinaryOperation::Operation::Equals:
         this->module->appendInstruction(GCodeIROpcode::Compare);
         this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Equals));
         break;
-      case GCodeBinaryOperation::Operation::NotEquals:
+      case Parser::GCodeBinaryOperation::Operation::NotEquals:
         this->module->appendInstruction(GCodeIROpcode::Compare);
         this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::NotEquals));
         break;
-      case GCodeBinaryOperation::Operation::Greater:
+      case Parser::GCodeBinaryOperation::Operation::Greater:
         this->module->appendInstruction(GCodeIROpcode::Compare);
         this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Greater));
         break;
-      case GCodeBinaryOperation::Operation::GreaterOrEquals:
+      case Parser::GCodeBinaryOperation::Operation::GreaterOrEquals:
         this->module->appendInstruction(GCodeIROpcode::Compare);
         this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Equals) | static_cast<int64_t>(GCodeCompare::Greater));
         break;
-      case GCodeBinaryOperation::Operation::Lesser:
+      case Parser::GCodeBinaryOperation::Operation::Lesser:
         this->module->appendInstruction(GCodeIROpcode::Compare);
         this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Lesser));
         break;
-      case GCodeBinaryOperation::Operation::LesserOrEquals:
+      case Parser::GCodeBinaryOperation::Operation::LesserOrEquals:
         this->module->appendInstruction(GCodeIROpcode::Compare);
         this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Equals) | static_cast<int64_t>(GCodeCompare::Lesser));
         break;
-      case GCodeBinaryOperation::Operation::And:
+      case Parser::GCodeBinaryOperation::Operation::And:
         this->module->appendInstruction(GCodeIROpcode::And);
         break;
-      case GCodeBinaryOperation::Operation::Or:
+      case Parser::GCodeBinaryOperation::Operation::Or:
         this->module->appendInstruction(GCodeIROpcode::Or);
         break;
-      case GCodeBinaryOperation::Operation::Xor:
+      case Parser::GCodeBinaryOperation::Operation::Xor:
         this->module->appendInstruction(GCodeIROpcode::Xor);
         break;
     }
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeFunctionCall &call) {
-    std::vector<std::reference_wrapper<GCodeNode>> args;
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeFunctionCall &call) {
+    std::vector<std::reference_wrapper<Parser::GCodeNode>> args;
     call.getArguments(args);
     std::reverse(args.begin(), args.end());
     for (auto arg : args) {
@@ -142,7 +142,7 @@ namespace GCodeLib {
     this->module->appendInstruction(GCodeIROpcode::Invoke, static_cast<int64_t>(symbol));
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeProcedureDefinition &definition) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeProcedureDefinition &definition) {
     auto label = this->module->newLabel();
     label->jump();
     std::string procedureName = "procedure" + std::to_string(definition.getIdentifier());
@@ -150,7 +150,7 @@ namespace GCodeLib {
     this->module->registerProcedure(definition.getIdentifier(), procedureName);
     proc.bind();
     definition.getBody().visit(*this);
-    std::vector<std::reference_wrapper<GCodeNode>> rets;
+    std::vector<std::reference_wrapper<Parser::GCodeNode>> rets;
     definition.getReturnValues(rets);
     for (auto ret : rets) {
       ret.get().visit(*this);
@@ -159,8 +159,8 @@ namespace GCodeLib {
     label->bind();
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeProcedureCall &call) {
-    std::vector<std::reference_wrapper<GCodeNode>> args;
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeProcedureCall &call) {
+    std::vector<std::reference_wrapper<Parser::GCodeNode>> args;
     call.getArguments(args);
     for (auto arg : args) {
       arg.get().visit(*this);
@@ -169,7 +169,7 @@ namespace GCodeLib {
     this->module->appendInstruction(GCodeIROpcode::Call, static_cast<int64_t>(args.size()));
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeConditional &conditional) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeConditional &conditional) {
     auto endifLabel = this->module->newLabel();
     conditional.getCondition().visit(*this);
     this->module->appendInstruction(GCodeIROpcode::Not);
@@ -187,7 +187,7 @@ namespace GCodeLib {
     endifLabel->bind();
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeWhileLoop &loop) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeWhileLoop &loop) {
     auto loopStart = this->module->newLabel();
     if (!loop.isDoWhile()) {
       auto loopEnd = this->module->newLabel();
@@ -203,7 +203,7 @@ namespace GCodeLib {
     loopStart->jumpIf();
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeRepeatLoop &loop) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeRepeatLoop &loop) {
     auto loopStart = this->module->newLabel();
     auto loopEnd = this->module->newLabel();
     loop.getCounter().visit(*this);
@@ -220,40 +220,40 @@ namespace GCodeLib {
     loopStart->jumpIf();
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeConstantValue &value) {
-    if (value.is(GCodeNode::Type::IntegerContant)) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeConstantValue &value) {
+    if (value.is(Parser::GCodeNode::Type::IntegerContant)) {
       this->module->appendInstruction(GCodeIROpcode::Push, GCodeRuntimeValue(value.asInteger()));
-    } else if (value.is(GCodeNode::Type::FloatContant)) {
+    } else if (value.is(Parser::GCodeNode::Type::FloatContant)) {
       this->module->appendInstruction(GCodeIROpcode::Push, GCodeRuntimeValue(value.asFloat()));
     }
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeLabel &label) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeLabel &label) {
     label.getStatement().visit(*this);
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeNumberedVariable &variable) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeNumberedVariable &variable) {
     this->module->appendInstruction(GCodeIROpcode::LoadNumbered, variable.getIdentifier());
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeNamedVariable &variable) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeNamedVariable &variable) {
     int64_t symbol = this->module->getSymbolId(variable.getIdentifier());
     this->module->appendInstruction(GCodeIROpcode::LoadNamed, symbol);
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeNumberedVariableAssignment &assignment) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeNumberedVariableAssignment &assignment) {
     assignment.getValue().visit(*this);
     this->module->appendInstruction(GCodeIROpcode::StoreNumbered, assignment.getIdentifier());
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeNamedVariableAssignment &assignment) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeNamedVariableAssignment &assignment) {
     assignment.getValue().visit(*this);
     int64_t symbol = this->module->getSymbolId(assignment.getIdentifier());
     this->module->appendInstruction(GCodeIROpcode::StoreNamed, symbol);
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeProcedureReturn &ret) {
-    std::vector<std::reference_wrapper<GCodeNode>> rets;
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeProcedureReturn &ret) {
+    std::vector<std::reference_wrapper<Parser::GCodeNode>> rets;
     ret.getReturnValues(rets);
     for (auto value : rets) {
       value.get().visit(*this);
@@ -261,7 +261,7 @@ namespace GCodeLib {
     this->module->appendInstruction(GCodeIROpcode::Ret, static_cast<int64_t>(rets.size()));
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeNamedStatement &stmt) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeNamedStatement &stmt) {
     auto &start = this->module->getNamedLabel(stmt.getIdentifier() + "_start");
     auto &end = this->module->getNamedLabel(stmt.getIdentifier() + "_end");
     start.bind();
@@ -269,13 +269,13 @@ namespace GCodeLib {
     end.bind();
   }
 
-  void GCodeIRTranslator::Impl::visit(const GCodeLoopControl &ctrl) {
+  void GCodeIRTranslator::Impl::visit(const Parser::GCodeLoopControl &ctrl) {
     std::string label = ctrl.getLoopIdentifier();
     switch (ctrl.getControlType()) {
-      case GCodeLoopControl::ControlType::Break:
+      case Parser::GCodeLoopControl::ControlType::Break:
         label += "_end";
         break;
-      case GCodeLoopControl::ControlType::Continue:
+      case Parser::GCodeLoopControl::ControlType::Continue:
         label += "_start";
         break;
     }

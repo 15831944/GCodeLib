@@ -1,11 +1,12 @@
 #include <cstdlib>
 #include <iostream>
-#include "gcodelib/parser/Parser.h"
+#include "gcodelib/parser/linuxcnc/Parser.h"
 #include "gcodelib/runtime/Translator.h"
 #include "gcodelib/runtime/Interpreter.h"
 #include <fstream>
 
-using namespace GCodeLib;
+using namespace GCodeLib::Runtime;
+using namespace GCodeLib::Parser::LinuxCNC;
 
 class TestInterpreter : public GCodeInterpreter {
  public:

@@ -1,6 +1,6 @@
 #include "gcodelib/runtime/Error.h"
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   GCodeRuntimeError::GCodeRuntimeError(const char *msg)
     : message(msg) {}

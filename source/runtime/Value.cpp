@@ -1,7 +1,7 @@
 #include "gcodelib/runtime/Value.h"
 #include <iostream>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
   
   const GCodeRuntimeValue GCodeRuntimeValue::Empty;
 

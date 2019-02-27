@@ -1,6 +1,6 @@
 #include "gcodelib/runtime/Storage.h"
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   GCodeCascadeVariableScope::GCodeCascadeVariableScope(GCodeVariableScope *parent)
     : numbered(parent ? &parent->getNumbered() : nullptr),

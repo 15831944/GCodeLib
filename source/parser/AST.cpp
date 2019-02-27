@@ -1,7 +1,7 @@
 #include "gcodelib/parser/AST.h"
 #include <iostream>
 
-namespace GCodeLib {
+namespace GCodeLib::Parser {
 
   template <typename T>
   static void copy_arguments(const std::vector<std::unique_ptr<T>> &source, std::vector<std::reference_wrapper<T>> &destination) {

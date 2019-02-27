@@ -7,7 +7,7 @@
 #include <functional>
 #include <memory>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   class GCodeRuntimeState {
    public:

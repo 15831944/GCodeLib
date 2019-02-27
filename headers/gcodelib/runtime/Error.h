@@ -4,7 +4,7 @@
 #include <string>
 #include <exception>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   class GCodeRuntimeError : public std::exception {
    public:

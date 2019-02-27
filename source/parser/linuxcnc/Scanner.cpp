@@ -1,11 +1,11 @@
-#include "gcodelib/parser/Scanner.h"
+#include "gcodelib/parser/linuxcnc/Scanner.h"
 #include "gcodelib/parser/Error.h"
 #include <iostream>
 #include <string>
 #include <regex>
 #include <map>
 
-namespace GCodeLib {
+namespace GCodeLib::Parser::LinuxCNC {
 
   static const std::map<std::string, GCodeKeyword> GCodeKeywords = {
     { "MOD", GCodeKeyword::Mod },

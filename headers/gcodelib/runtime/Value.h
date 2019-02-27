@@ -5,7 +5,7 @@
 #include <variant>
 #include <iosfwd>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   class GCodeRuntimeValue {
    public:

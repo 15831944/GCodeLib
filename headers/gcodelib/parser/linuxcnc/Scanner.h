@@ -1,13 +1,13 @@
-#ifndef GCODELIB_PARSER_SCANNER_H_
-#define GCODELIB_PARSER_SCANNER_H_
+#ifndef GCODELIB_PARSER_LINUXCNC_SCANNER_H_
+#define GCODELIB_PARSER_LINUXCNC_SCANNER_H_
 
 #include "gcodelib/Base.h"
-#include "gcodelib/parser/Token.h"
+#include "gcodelib/parser/linuxcnc/Token.h"
 #include <iosfwd>
 #include <string>
 #include <optional>
 
-namespace GCodeLib {
+namespace GCodeLib::Parser::LinuxCNC {
 
   class GCodeScanner {
    public:

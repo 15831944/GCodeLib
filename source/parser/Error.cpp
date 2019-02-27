@@ -1,6 +1,6 @@
 #include "gcodelib/parser/Error.h"
 
-namespace GCodeLib {
+namespace GCodeLib::Parser {
 
   GCodeParseException::GCodeParseException(const char *msg, const SourcePosition &loc)
     : message(msg), position(loc) {}

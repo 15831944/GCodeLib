@@ -4,7 +4,7 @@
 #include "gcodelib/Base.h"
 #include <string>
 
-namespace GCodeLib {
+namespace GCodeLib::Parser {
 
   class SourcePosition {
    public:

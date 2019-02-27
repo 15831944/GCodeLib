@@ -4,7 +4,7 @@
 #include "gcodelib/runtime/Value.h"
 #include <map>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   template <typename T>
   class GCodeDictionary {

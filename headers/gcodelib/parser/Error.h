@@ -6,7 +6,7 @@
 #include <string>
 #include <optional>
 
-namespace GCodeLib {
+namespace GCodeLib::Parser {
 
   class GCodeParseException : public std::exception {
    public:

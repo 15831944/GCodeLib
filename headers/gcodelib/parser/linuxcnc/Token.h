@@ -7,7 +7,7 @@
 #include <variant>
 #include <iosfwd>
 
-namespace GCodeLib {
+namespace GCodeLib::Parser::LinuxCNC {
 
   enum class GCodeOperator {
 // Commands

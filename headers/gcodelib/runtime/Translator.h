@@ -4,12 +4,12 @@
 #include "gcodelib/runtime/IR.h"
 #include "gcodelib/parser/AST.h"
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   class GCodeIRTranslator  {
    public:
     GCodeIRTranslator();
-    std::unique_ptr<GCodeIRModule> translate(const GCodeBlock &);
+    std::unique_ptr<GCodeIRModule> translate(const Parser::GCodeBlock &);
    private:
     class Impl;
     std::shared_ptr<Impl> impl;

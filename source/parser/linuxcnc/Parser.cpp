@@ -1,9 +1,9 @@
-#include "gcodelib/parser/Parser.h"
+#include "gcodelib/parser/linuxcnc/Parser.h"
 #include "gcodelib/parser/Error.h"
 #include <algorithm>
 #include <iostream>
 
-namespace GCodeLib  {
+namespace GCodeLib::Parser::LinuxCNC  {
 
   static const std::set<GCodeOperator> GCodeCommandOperators = {
     GCodeOperator::G,

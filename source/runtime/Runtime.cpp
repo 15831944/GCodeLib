@@ -2,7 +2,7 @@
 #include "gcodelib/runtime/Error.h"
 #include <cmath>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   static const int64_t GCodeTrue = 1;
   static const int64_t GCodeFalse = 0;

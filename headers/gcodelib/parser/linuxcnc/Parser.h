@@ -1,14 +1,14 @@
-#ifndef GCODELIB_PARSER_PARSER_H_
-#define GCODELIB_PARSER_PARSER_H_
+#ifndef GCODELIB_PARSER_LINUXCNC_PARSER_H_
+#define GCODELIB_PARSER_LINUXCNC_PARSER_H_
 
 #include "gcodelib/parser/AST.h"
-#include "gcodelib/parser/Scanner.h"
+#include "gcodelib/parser/linuxcnc/Scanner.h"
 #include <functional>
 #include <set>
 #include <memory>
 #include <stack>
 
-namespace GCodeLib {
+namespace GCodeLib::Parser::LinuxCNC {
 
   class GCodeParser {
     struct FilteredScanner;

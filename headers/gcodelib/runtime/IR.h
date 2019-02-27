@@ -9,7 +9,7 @@
 #include <memory>
 #include <iosfwd>
 
-namespace GCodeLib {
+namespace GCodeLib::Runtime {
 
   enum class GCodeIROpcode {
     Push,
