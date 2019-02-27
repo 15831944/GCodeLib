@@ -88,6 +88,8 @@ namespace GCodeLib {
     std::size_t getSymbolId(const std::string &);
     const std::string &getSymbol(std::size_t) const;
     std::unique_ptr<GCodeIRLabel> newLabel();
+    GCodeIRLabel &getNamedLabel(const std::string &);
+    void registerProcedure(int64_t, const std::string &);
     GCodeIRLabel &getProcedure(int64_t);
     void appendInstruction(GCodeIROpcode, const GCodeRuntimeValue & = GCodeRuntimeValue::Empty);
 
@@ -97,6 +99,7 @@ namespace GCodeLib {
     std::vector<GCodeIRInstruction> code;
     std::map<std::size_t, std::string> symbols;
     std::map<std::string, std::size_t> symbolIdentifiers;
+    std::map<std::string, std::shared_ptr<GCodeIRLabel>> labels;
     std::map<int64_t, std::shared_ptr<GCodeIRLabel>> procedures;
   };
 }

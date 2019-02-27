@@ -75,7 +75,9 @@ namespace GCodeLib {
     Endwhile,
     Do,
     Repeat,
-    Endrepeat
+    Endrepeat,
+    Break,
+    Continue
   };
 
   class GCodeToken {

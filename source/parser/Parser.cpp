@@ -235,18 +235,24 @@ namespace GCodeLib  {
         (this->openedStatements.empty() || this->openedStatements.top() != this->tokenAt(1).getInteger())) ||
       this->expectKeyword(GCodeKeyword::Do, 2) ||
       this->expectKeyword(GCodeKeyword::Repeat, 2) ||
-      this->expectKeyword(GCodeKeyword::Return, 2));
+      this->expectKeyword(GCodeKeyword::Return, 2) ||
+      this->expectKeyword(GCodeKeyword::Break, 2) ||
+      this->expectKeyword(GCodeKeyword::Continue, 2));
   }
 
   bool GCodeParser::checkFlowCommandFinalizer() {
-    return this->expectOperator(GCodeOperator::O) &&
-      this->expectToken(GCodeToken::Type::IntegerContant, 1) &&
+    if (!this->expectOperator(GCodeOperator::O) ||
+      !this->expectToken(GCodeToken::Type::IntegerContant, 1) ||
+      this->openedStatements.empty()) {
+      return false;
+    }
+    int64_t id = this->openedStatements.top();
+    return id == this->tokenAt(1).getInteger() &&
       (this->expectKeyword(GCodeKeyword::Endsub, 2) ||
       this->expectKeyword(GCodeKeyword::Elseif, 2) ||
       this->expectKeyword(GCodeKeyword::Else, 2) ||
       this->expectKeyword(GCodeKeyword::Endif, 2) ||
-      (this->expectKeyword(GCodeKeyword::While, 2) &&
-        !this->openedStatements.empty() && this->openedStatements.top() == this->tokenAt(1).getInteger()) ||
+      this->expectKeyword(GCodeKeyword::While, 2) ||
       this->expectKeyword(GCodeKeyword::Endwhile, 2) ||
       this->expectKeyword(GCodeKeyword::Endrepeat, 2));
   }
@@ -271,6 +277,8 @@ namespace GCodeLib  {
       stmt = this->nextRepeatLoop(id);
     } else if (this->checkProcedureReturn()) {
       stmt = this->nextProcedureReturn();
+    } else if (this->checkLoopControl()) {
+      stmt = this->nextLoopControl(id);
     } else {
       this->openedStatements.pop();
       this->error("Unknown flow command");
@@ -354,6 +362,7 @@ namespace GCodeLib  {
   std::unique_ptr<GCodeNode> GCodeParser::nextWhileLoop(int64_t id) {
     auto position = this->position();
     this->assert(&GCodeParser::checkWhileLoop, "Expected while loop");
+    std::string loopName = "while_loop_" + std::to_string(id);
     if (this->expectKeyword(GCodeKeyword::While)) {
       this->shift();
       std::unique_ptr<GCodeNode> conditional = this->nextExpression();
@@ -366,7 +375,7 @@ namespace GCodeLib  {
       this->shift();
       this->shift();
       this->shift();
-      return std::make_unique<GCodeWhileLoop>(std::move(conditional), std::move(body), false, position.value());
+      return std::make_unique<GCodeNamedStatement>(loopName, std::make_unique<GCodeWhileLoop>(std::move(conditional), std::move(body), false, position.value()), position.value());
     } else {
       this->shift();
       std::unique_ptr<GCodeNode> body = this->nextBlock();
@@ -379,7 +388,7 @@ namespace GCodeLib  {
       this->shift();
       this->shift();
       std::unique_ptr<GCodeNode> conditional = this->nextExpression();
-      return std::make_unique<GCodeWhileLoop>(std::move(conditional), std::move(body), true, position.value());
+      return std::make_unique<GCodeNamedStatement>(loopName, std::make_unique<GCodeWhileLoop>(std::move(conditional), std::move(body), true, position.value()), position.value());
     }
   }
 
@@ -450,6 +459,27 @@ namespace GCodeLib  {
       args.push_back(this->nextExpression());
     }
     return std::make_unique<GCodeProcedureCall>(std::move(pid), std::move(args), position.value());
+  }
+
+  bool GCodeParser::checkLoopControl() {
+    return this->expectKeyword(GCodeKeyword::Break) ||
+      this->expectKeyword(GCodeKeyword::Continue);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextLoopControl(int64_t id) {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkLoopControl, "Expected \'break\' or \'continue\'");
+    std::string loopName = "while_loop_" + std::to_string(id);
+    GCodeKeyword kw = this->tokenAt().getKeyword();
+    this->shift();
+    switch (kw) {
+      case GCodeKeyword::Break:
+        return std::make_unique<GCodeLoopControl>(loopName, GCodeLoopControl::ControlType::Break, position.value());
+      case GCodeKeyword::Continue:
+        return std::make_unique<GCodeLoopControl>(loopName, GCodeLoopControl::ControlType::Continue, position.value());
+      default:
+        return nullptr;
+    }
   }
 
   bool GCodeParser::checkCommand() {

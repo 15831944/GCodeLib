@@ -241,6 +241,25 @@ namespace GCodeLib {
     }
   }
 
+  GCodeNamedStatement::GCodeNamedStatement(const std::string &identifier, std::unique_ptr<GCodeNode> stmt, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::NamedStatement, position), identifier(identifier), statement(std::move(stmt)) {}
+  
+  const std::string &GCodeNamedStatement::getIdentifier() const {
+    return this->identifier;
+  }
+
+  GCodeNode &GCodeNamedStatement::getStatement() const {
+    return *this->statement;
+  }
+
+  void GCodeNamedStatement::visit(Visitor &v) {
+    v.visit(*this);
+  }
+  
+  void GCodeNamedStatement::dump(std::ostream &os) const {
+    os << "[" << this->identifier << ": " << this->getStatement() << ']';
+  }
+
   GCodeProcedureDefinition::GCodeProcedureDefinition(int64_t id, std::unique_ptr<GCodeNode> body, std::vector<std::unique_ptr<GCodeNode>> rets, const SourcePosition &position)
     : GCodeNode::GCodeNode(Type::ProcedureDefinition, position), identifier(id), body(std::move(body)), retValues(std::move(rets)) {}
   
@@ -377,5 +396,29 @@ namespace GCodeLib {
 
   void GCodeRepeatLoop::dump(std::ostream &os) const {
     os << "[repeat " << this->getBody() << ' ' << this->getCounter() << ']';
+  }
+
+  GCodeLoopControl::GCodeLoopControl(const std::string &identifier, ControlType controlType, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::LoopControl, position), identifier(identifier), controlType(controlType) {}
+  
+  const std::string &GCodeLoopControl::getLoopIdentifier() const {
+    return this->identifier;
+  }
+
+  GCodeLoopControl::ControlType GCodeLoopControl::getControlType() const {
+    return this->controlType;
+  }
+
+  void GCodeLoopControl::visit(Visitor &v) {
+    v.visit(*this);
+  }
+  
+  void GCodeLoopControl::dump(std::ostream &os) const {
+    if (this->controlType == ControlType::Break) {
+      os << "[break ";
+    } else {
+      os << "[continue ";
+    }
+    os << this->identifier << ']';
   }
 }

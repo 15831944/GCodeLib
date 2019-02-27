@@ -24,6 +24,7 @@ namespace GCodeLib {
       Label,
       Command,
       Block,
+      NamedStatement,
       ProcedureDefinition,
       ProcedureReturn,
       ProcedureCall,
@@ -31,7 +32,8 @@ namespace GCodeLib {
       NamedAssignment,
       Conditional,
       WhileLoop,
-      RepeatLoop
+      RepeatLoop,
+      LoopControl
     };
 
     class Visitor;
@@ -247,6 +249,19 @@ namespace GCodeLib {
     std::vector<std::unique_ptr<GCodeNode>> content;
   };
 
+  class GCodeNamedStatement : public GCodeNode {
+   public:
+    GCodeNamedStatement(const std::string &, std::unique_ptr<GCodeNode>, const SourcePosition &);
+    const std::string &getIdentifier() const;
+    GCodeNode &getStatement() const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    std::string identifier;
+    std::unique_ptr<GCodeNode> statement;
+  };
+
   class GCodeProcedureDefinition : public GCodeNode {
    public:
     GCodeProcedureDefinition(int64_t, std::unique_ptr<GCodeNode>, std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
@@ -329,6 +344,24 @@ namespace GCodeLib {
     std::unique_ptr<GCodeNode> body;
   };
 
+  class GCodeLoopControl : public GCodeNode {
+   public:
+    enum class ControlType {
+      Break,
+      Continue
+    };
+
+    GCodeLoopControl(const std::string &, ControlType, const SourcePosition &);
+    const std::string &getLoopIdentifier() const;
+    ControlType getControlType() const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    std::string identifier;
+    ControlType controlType;
+  };
+
   class GCodeNode::Visitor {
    public:
     virtual ~Visitor() = default;
@@ -342,12 +375,14 @@ namespace GCodeLib {
     virtual void visit(const GCodeLabel &) {}
     virtual void visit(const GCodeCommand &) {}
     virtual void visit(const GCodeBlock &) {}
+    virtual void visit(const GCodeNamedStatement &) {}
     virtual void visit(const GCodeProcedureDefinition &) {}
     virtual void visit(const GCodeProcedureReturn &) {}
     virtual void visit(const GCodeProcedureCall &) {}
     virtual void visit(const GCodeConditional &) {}
     virtual void visit(const GCodeWhileLoop &) {}
     virtual void visit(const GCodeRepeatLoop &) {}
+    virtual void visit(const GCodeLoopControl &) {}
     virtual void visit(const GCodeNumberedVariableAssignment &) {}
     virtual void visit(const GCodeNamedVariableAssignment &) {}
   };

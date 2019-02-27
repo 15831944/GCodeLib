@@ -23,6 +23,8 @@ namespace GCodeLib {
     void visit(const GCodeNumberedVariableAssignment &) override;
     void visit(const GCodeNamedVariableAssignment &) override;
     void visit(const GCodeProcedureReturn &) override;
+    void visit(const GCodeNamedStatement &) override;
+    void visit(const GCodeLoopControl &) override;
    private:
     std::unique_ptr<GCodeIRModule> module;
   };
@@ -143,7 +145,9 @@ namespace GCodeLib {
   void GCodeIRTranslator::Impl::visit(const GCodeProcedureDefinition &definition) {
     auto label = this->module->newLabel();
     label->jump();
-    auto &proc = this->module->getProcedure(definition.getIdentifier());
+    std::string procedureName = "procedure" + std::to_string(definition.getIdentifier());
+    auto &proc = this->module->getNamedLabel(procedureName);
+    this->module->registerProcedure(definition.getIdentifier(), procedureName);
     proc.bind();
     definition.getBody().visit(*this);
     std::vector<std::reference_wrapper<GCodeNode>> rets;
@@ -255,5 +259,27 @@ namespace GCodeLib {
       value.get().visit(*this);
     }
     this->module->appendInstruction(GCodeIROpcode::Ret, static_cast<int64_t>(rets.size()));
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeNamedStatement &stmt) {
+    auto &start = this->module->getNamedLabel(stmt.getIdentifier() + "_start");
+    auto &end = this->module->getNamedLabel(stmt.getIdentifier() + "_end");
+    start.bind();
+    stmt.getStatement().visit(*this);
+    end.bind();
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeLoopControl &ctrl) {
+    std::string label = ctrl.getLoopIdentifier();
+    switch (ctrl.getControlType()) {
+      case GCodeLoopControl::ControlType::Break:
+        label += "_end";
+        break;
+      case GCodeLoopControl::ControlType::Continue:
+        label += "_start";
+        break;
+    }
+    auto &dest = this->module->getNamedLabel(label);
+    dest.jump();
   }
 }

@@ -51,6 +51,8 @@ namespace GCodeLib {
     std::unique_ptr<GCodeNode> nextProcedureCall();
     bool checkProcedureReturn();
     std::unique_ptr<GCodeNode> nextProcedureReturn();
+    bool checkLoopControl();
+    std::unique_ptr<GCodeNode> nextLoopControl(int64_t);
     bool checkCommand();
     std::unique_ptr<GCodeCommand> nextCommand();
     bool checkCommandWord();

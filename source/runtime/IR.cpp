@@ -97,11 +97,19 @@ namespace GCodeLib {
     }
   }
 
-  GCodeIRLabel &GCodeIRModule::getProcedure(int64_t id) {
-    if (this->procedures.count(id) == 0) {
-      this->procedures[id] = std::make_shared<GCodeIRLabel>(*this);
+  GCodeIRLabel &GCodeIRModule::getNamedLabel(const std::string &label) {
+    if (this->labels.count(label) == 0) {
+      this->labels[label] = std::make_shared<GCodeIRLabel>(*this);
     }
-    return *this->procedures[id];
+    return *this->labels[label];
+  }
+
+  void GCodeIRModule::registerProcedure(int64_t procId, const std::string &label) {
+    this->procedures[procId] = this->labels[label];
+  }
+
+  GCodeIRLabel &GCodeIRModule::getProcedure(int64_t procId) {
+    return *this->procedures[procId];
   }
 
   void GCodeIRModule::appendInstruction(GCodeIROpcode opcode, const GCodeRuntimeValue &value) {
