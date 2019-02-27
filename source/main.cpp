@@ -10,6 +10,11 @@ using namespace GCodeLib::Runtime;
 class TestInterpreter : public GCodeInterpreter {
  public:
   using GCodeInterpreter::GCodeInterpreter;
+  TestInterpreter(GCodeIRModule &module)
+    : GCodeInterpreter::GCodeInterpreter(module), systemScope(numbered, named) {
+    this->named.putSupplier("_vmajor", []()->GCodeRuntimeValue { return 100L; });
+  }
+
  protected:
   void syscall(GCodeSyscallType type, const GCodeRuntimeValue &function, const GCodeScopedDictionary<unsigned char> &args) override {
     std::cout << static_cast<unsigned char>(type) << function << '\t';
@@ -18,6 +23,14 @@ class TestInterpreter : public GCodeInterpreter {
     }
     std::cout << std::endl;
   }
+
+  GCodeVariableScope &getSystemScope() override {
+    return this->systemScope;
+  }
+ private:
+  GCodeVirtualDictionary<std::string> named;
+  GCodeVirtualDictionary<int64_t> numbered;
+  GCodeCustomVariableScope systemScope;
 };
 
 int main(int argc, const char **argv) {

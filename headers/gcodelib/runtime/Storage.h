@@ -3,6 +3,7 @@
 
 #include "gcodelib/runtime/Value.h"
 #include <map>
+#include <functional>
 
 namespace GCodeLib::Runtime {
 
@@ -10,10 +11,10 @@ namespace GCodeLib::Runtime {
   class GCodeDictionary {
    public:
     virtual ~GCodeDictionary() = default;
-    virtual bool has(const T&) const = 0;
-    virtual const GCodeRuntimeValue &get(const T&) const = 0;
-    virtual bool put(const T&, const GCodeRuntimeValue &) = 0;
-    virtual bool remove(const T&) = 0;
+    virtual bool has(const T &) const = 0;
+    virtual GCodeRuntimeValue get(const T &) const = 0;
+    virtual bool put(const T &, const GCodeRuntimeValue &) = 0;
+    virtual bool remove(const T &) = 0;
     virtual void clear() = 0;
   };
 
@@ -40,7 +41,7 @@ namespace GCodeLib::Runtime {
       return this->scope.count(key) != 0;
     }
 
-    const GCodeRuntimeValue &get(const T &key) const override {
+    GCodeRuntimeValue get(const T &key) const override {
       if (this->scope.count(key) != 0) {
         return this->scope.at(key);
       } else if (this->parent != nullptr) {
@@ -89,11 +90,105 @@ namespace GCodeLib::Runtime {
     std::map<T, GCodeRuntimeValue> scope;
   };
 
+  template <typename T>
+  class GCodeVirtualDictionary : public GCodeDictionary<T> {
+   public:
+    using Supplier = std::function<GCodeRuntimeValue()>;
+    bool has(const T &key) const override {
+      return this->dictionary.count(key) != 0;
+    }
+
+    GCodeRuntimeValue get(const T &key) const override {
+      if (this->has(key)) {
+        return this->dictionary.at(key)();
+      } else {
+        return GCodeRuntimeValue::Empty;
+      }
+    }
+
+    bool put(const T &key, const GCodeRuntimeValue &value) override {
+      return false;
+    }
+
+    bool remove(const T &key) override {
+      return false;
+    }
+
+    void clear() override {}
+
+    void putSupplier(const T &key, Supplier sup) {
+      this->dictionary[key] = sup;
+    }
+
+    bool hasSupplier(const T &key) const {
+      return this->dictionary.count(key) != 0;
+    }
+
+    void removeSupplier(const T &key) {
+      if (this->hasSupplier(key)) {
+        this->dictionary.erase(key);
+      }
+    }
+
+    void clearSuppliers() {
+      this->dictionary.clear();
+    }
+   private:
+    std::map<T, Supplier> dictionary;
+  };
+
+  template <typename T>
+  class GCodeDictionaryMultiplexer : public GCodeDictionary<T> {
+   public:
+    GCodeDictionaryMultiplexer(GCodeDictionary<T> &master, GCodeDictionary<T> *slave = nullptr)
+      : master(master), slave(slave) {}
+
+    bool has(const T &key) const override {
+      return this->master.has(key) ||
+        (this->slave != nullptr && this->slave->has(key));
+    }
+
+    GCodeRuntimeValue get(const T &key) const override {
+      if (this->master.has(key)) {
+        return this->master.get(key);
+      } else if (this->slave) {
+        return this->slave->get(key);
+      } else {
+        return GCodeRuntimeValue::Empty;
+      }
+    }
+
+    bool put(const T &key, const GCodeRuntimeValue &value) override {
+      return this->master.put(key, value);
+    }
+
+    bool remove(const T &key) override {
+      return this->master.remove(key);
+    }
+
+    void clear() override {
+      this->master.clear();
+    }
+   private:
+    GCodeDictionary<T> &master;
+    GCodeDictionary<T> *slave;
+  };
+
   class GCodeVariableScope {
    public:
     virtual ~GCodeVariableScope() = default;
     virtual GCodeDictionary<int64_t> &getNumbered() = 0;
     virtual GCodeDictionary<std::string> &getNamed() = 0;
+  };
+
+  class GCodeCustomVariableScope : public GCodeVariableScope {
+   public:
+    GCodeCustomVariableScope(GCodeDictionary<int64_t> &, GCodeDictionary<std::string> &);
+    GCodeDictionary<int64_t> &getNumbered() override;
+    GCodeDictionary<std::string> &getNamed() override;
+   private:
+    GCodeDictionary<int64_t> &numbered;
+    GCodeDictionary<std::string> &named;
   };
 
   class GCodeCascadeVariableScope : public GCodeVariableScope {

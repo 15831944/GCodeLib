@@ -13,4 +13,15 @@ namespace GCodeLib::Runtime {
   GCodeDictionary<std::string> &GCodeCascadeVariableScope::getNamed() {
     return this->named;
   }
+
+  GCodeCustomVariableScope::GCodeCustomVariableScope(GCodeDictionary<int64_t> &numbered, GCodeDictionary<std::string> &named)
+    : numbered(numbered), named(named) {}
+
+  GCodeDictionary<int64_t> &GCodeCustomVariableScope::getNumbered() {
+    return this->numbered;
+  }
+
+  GCodeDictionary<std::string> &GCodeCustomVariableScope::getNamed() {
+    return this->named;
+  }
 }
