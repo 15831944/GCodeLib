@@ -1,12 +1,11 @@
 #include <cstdlib>
 #include <iostream>
-#include "gcodelib/parser/linuxcnc/Parser.h"
-#include "gcodelib/runtime/Translator.h"
+#include "gcodelib/Frontend.h"
 #include "gcodelib/runtime/Interpreter.h"
 #include <fstream>
 
+using namespace GCodeLib;
 using namespace GCodeLib::Runtime;
-using namespace GCodeLib::Parser::LinuxCNC;
 
 class TestInterpreter : public GCodeInterpreter {
  public:
@@ -23,12 +22,8 @@ class TestInterpreter : public GCodeInterpreter {
 
 int main(int argc, const char **argv) {
   std::ifstream is(argv[1]);
-  GCodeDefaultScanner scanner(is);
-  GCodeLCNCMangler mangler;
-  GCodeParser parser(scanner, mangler);
-  auto root = parser.parse();
-  GCodeIRTranslator translator(mangler);
-  auto ir = translator.translate(*root);
+  GCodeLinuxCNC compiler;
+  auto ir = compiler.compile(is);
   TestInterpreter interp(*ir);
   interp.execute();
   return EXIT_SUCCESS;
