@@ -85,10 +85,12 @@ namespace GCodeLib::Parser::LinuxCNC  {
     }
   }
 
-  void GCodeParser::shift() {
-    this->tokens[0] = std::move(this->tokens[1]);
-    this->tokens[1] = this->tokens[2];
-    this->tokens[2] = this->scanner->next();
+  void GCodeParser::shift(std::size_t count) {
+    while (count--) {
+      this->tokens[0] = std::move(this->tokens[1]);
+      this->tokens[1] = this->tokens[2];
+      this->tokens[2] = this->scanner->next();
+    }
   }
 
   std::optional<SourcePosition> GCodeParser::position() {
@@ -160,6 +162,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
       this->checkFlowCommand() ||
       this->checkProcedureCall() ||
       this->checkAssignment() ||
+      this->checkNumberedStatement() ||
       this->expectToken(GCodeToken::Type::NewLine);
   }
 
@@ -168,10 +171,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
       auto position = this->position();
       this->shift();
       if (this->checkStatement()) {
-        auto stmt = this->nextStatement();
-        if (stmt) {
-          return std::make_unique<GCodeLabel>(position.value().getLine(), std::move(stmt), position.value());
-        }
+        return this->nextStatement();
       }
       return nullptr;
     } else if (this->checkFlowCommand()) {
@@ -180,9 +180,22 @@ namespace GCodeLib::Parser::LinuxCNC  {
       return this->nextProcedureCall();
     } else if (this->checkAssignment()) {
       return this->nextAssignment();
+    } else if (this->checkNumberedStatement()) {
+      return this->nextNumberedStatement();
     } else {
       return this->nextCommand();
     }
+  }
+
+  bool GCodeParser::checkNumberedStatement() {
+    return this->expectOperator(GCodeOperator::N) &&
+      this->expectToken(GCodeToken::Type::IntegerContant, 1);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextNumberedStatement() {
+    this->assert(&GCodeParser::checkNumberedStatement, "Expected numbered statement");
+    this->shift(2);
+    return this->nextStatement();
   }
 
   bool GCodeParser::checkAssignment() {
@@ -318,9 +331,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
       this->expectInteger(id, 1) &&
       this->expectKeyword(GCodeKeyword::Elseif, 2)) {
       position = this->position();
-      this->shift();
-      this->shift();
-      this->shift();
+      this->shift(3);
       std::unique_ptr<GCodeNode> elifCondition = this->nextExpression();
       std::unique_ptr<GCodeNode> elifBody = this->nextBlock();
       ifBlocks.push_back(std::make_tuple(std::move(elifCondition), std::move(elifBody), position.value()));
@@ -330,9 +341,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
     if (this->expectOperator(GCodeOperator::O) &&
       this->expectInteger(id, 1) &&
       this->expectKeyword(GCodeKeyword::Else, 2)) {
-      this->shift();
-      this->shift();
-      this->shift();
+      this->shift(3);
       elseBody = this->nextBlock();
     }
     if (!(this->expectOperator(GCodeOperator::O) &&
@@ -340,9 +349,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
       this->expectKeyword(GCodeKeyword::Endif, 2))) {
       this->error("Expected \'endif\'");
     }
-    this->shift();
-    this->shift();
-    this->shift();
+    this->shift(3);
     condition = std::move(std::get<0>(ifBlocks.at(0)));
     body = std::move(std::get<1>(ifBlocks.at(0)));
     std::unique_ptr<GCodeNode> node = std::make_unique<GCodeConditional>(std::move(condition), std::move(body), std::move(elseBody), std::get<2>(ifBlocks.at(0)));
@@ -362,7 +369,6 @@ namespace GCodeLib::Parser::LinuxCNC  {
   std::unique_ptr<GCodeNode> GCodeParser::nextWhileLoop(int64_t id) {
     auto position = this->position();
     this->assert(&GCodeParser::checkWhileLoop, "Expected while loop");
-    std::string loopName = this->mangler.getLoop(id);
     if (this->expectKeyword(GCodeKeyword::While)) {
       this->shift();
       std::unique_ptr<GCodeNode> conditional = this->nextExpression();
@@ -372,10 +378,8 @@ namespace GCodeLib::Parser::LinuxCNC  {
         this->expectKeyword(GCodeKeyword::Endwhile, 2))) {
         this->error("\'endwhile\' expected");
       }
-      this->shift();
-      this->shift();
-      this->shift();
-      return std::make_unique<GCodeNamedStatement>(loopName, std::make_unique<GCodeWhileLoop>(std::move(conditional), std::move(body), false, position.value()), position.value());
+      this->shift(3);
+      return std::make_unique<GCodeWhileLoop>(id, std::move(conditional), std::move(body), false, position.value());
     } else {
       this->shift();
       std::unique_ptr<GCodeNode> body = this->nextBlock();
@@ -384,11 +388,9 @@ namespace GCodeLib::Parser::LinuxCNC  {
         this->expectKeyword(GCodeKeyword::While, 2))) {
         this->error("\'while\' expected");
       }
-      this->shift();
-      this->shift();
-      this->shift();
+      this->shift(3);
       std::unique_ptr<GCodeNode> conditional = this->nextExpression();
-      return std::make_unique<GCodeNamedStatement>(loopName, std::make_unique<GCodeWhileLoop>(std::move(conditional), std::move(body), true, position.value()), position.value());
+      return std::make_unique<GCodeWhileLoop>(id, std::move(conditional), std::move(body), true, position.value());
     }
   }
 
@@ -399,7 +401,6 @@ namespace GCodeLib::Parser::LinuxCNC  {
   std::unique_ptr<GCodeNode> GCodeParser::nextRepeatLoop(int64_t id) {
     auto position = this->position();
     this->assert(&GCodeParser::checkRepeatLoop, "Expected repeat loop");
-    std::string loopName = this->mangler.getLoop(id);
     this->shift();
     std::unique_ptr<GCodeNode> counter = this->nextExpression();
     std::unique_ptr<GCodeNode> body = this->nextBlock();
@@ -408,10 +409,8 @@ namespace GCodeLib::Parser::LinuxCNC  {
       this->expectKeyword(GCodeKeyword::Endrepeat, 2))) {
       this->error("\'endrepeat\' expected");
     }
-    this->shift();
-    this->shift();
-    this->shift();
-    return std::make_unique<GCodeNamedStatement>(loopName, std::make_unique<GCodeRepeatLoop>(std::move(counter), std::move(body), position.value()), position.value());
+    this->shift(3);
+    return std::make_unique<GCodeRepeatLoop>(id, std::move(counter), std::move(body), position.value());
   }
 
   bool GCodeParser::checkProcedure() {
@@ -427,8 +426,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
       !this->expectInteger(pid, 1)) {
       this->error("Procedure close command expected");
     }
-    this->shift();
-    this->shift();
+    this->shift(2);
     if (!this->expectKeyword(GCodeKeyword::Endsub)) {
       this->error("\'endsub\' expected");
     }
@@ -470,14 +468,13 @@ namespace GCodeLib::Parser::LinuxCNC  {
   std::unique_ptr<GCodeNode> GCodeParser::nextLoopControl(int64_t id) {
     auto position = this->position();
     this->assert(&GCodeParser::checkLoopControl, "Expected \'break\' or \'continue\'");
-    std::string loopName = this->mangler.getLoop(id);
     GCodeKeyword kw = this->tokenAt().getKeyword();
     this->shift();
     switch (kw) {
       case GCodeKeyword::Break:
-        return std::make_unique<GCodeLoopControl>(loopName, GCodeLoopControl::ControlType::Break, position.value());
+        return std::make_unique<GCodeLoopControl>(id, GCodeLoopControl::ControlType::Break, position.value());
       case GCodeKeyword::Continue:
-        return std::make_unique<GCodeLoopControl>(loopName, GCodeLoopControl::ControlType::Continue, position.value());
+        return std::make_unique<GCodeLoopControl>(id, GCodeLoopControl::ControlType::Continue, position.value());
       default:
         return nullptr;
     }
@@ -681,8 +678,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
     auto expr = this->nextAtom();
     while (this->expectOperator(GCodeOperator::Star) &&
       this->expectOperator(GCodeOperator::Star, 1)) {
-      this->shift();
-      this->shift();
+      this->shift(2);
       auto right = this->nextAtom();
       expr = std::make_unique<GCodeBinaryOperation>(GCodeBinaryOperation::Operation::Power, std::move(expr), std::move(right), position.value());
     }

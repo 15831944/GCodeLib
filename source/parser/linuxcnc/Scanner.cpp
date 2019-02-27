@@ -39,10 +39,9 @@ namespace GCodeLib::Parser::LinuxCNC {
   static std::regex Integer(R"(^[0-9]+)");
   static std::regex Float(R"(^[0-9]+\.[0-9]+)");
   static std::regex Literal(R"(^[a-zA-Z_]{2,}[\w_]*)");
-  static std::regex Operator(R"(^[A-DF-MO-Z\+\-*/%\[\]#\=<>])", std::regex_constants::ECMAScript | std::regex_constants::icase);
+  static std::regex Operator(R"(^[A-DF-Z\+\-*/%\[\]#\=<>])", std::regex_constants::ECMAScript | std::regex_constants::icase);
   static std::regex Comment(R"(^;.*$)");
   static std::regex BracedComment(R"(^\([^\)]*\))");
-  static std::regex LineNumber(R"(N\s*[0-9]+(\.[0-9]*)?)", std::regex_constants::ECMAScript | std::regex_constants::icase);
 
   static bool match_regex(const std::string &string, std::smatch &match, const std::regex &regex) {
     return std::regex_search(string, match, regex) && !match.empty();
@@ -63,11 +62,7 @@ namespace GCodeLib::Parser::LinuxCNC {
     }
     std::smatch match;
     std::optional<GCodeToken> token;
-    if (match_regex(this->buffer, match, LineNumber)) {
-      uint32_t lineNumber = std::stoull(match.str().substr(1));
-      this->source_position.update(lineNumber, 1, 0);
-      token = GCodeToken(this->source_position);
-    } else if (match_regex(this->buffer, match, Float)) {
+    if (match_regex(this->buffer, match, Float)) {
       token = GCodeToken(std::stod(match.str()), this->source_position);
     } else if (match_regex(this->buffer, match, Integer)) {
       token = GCodeToken(static_cast<int64_t>(std::stoll(match.str())), this->source_position); 

@@ -179,25 +179,6 @@ namespace GCodeLib::Parser {
     os << this->field << this->getValue();
   }
 
-  GCodeLabel::GCodeLabel(int64_t label, std::unique_ptr<GCodeNode> stmt, const SourcePosition &position)
-    : GCodeNode::GCodeNode(Type::Label, position), label(label), statement(std::move(stmt)) {}
-  
-  int64_t GCodeLabel::getLabel() const {
-    return this->label;
-  }
-
-  const GCodeNode &GCodeLabel::getStatement() const {
-    return *this->statement;
-  }
-
-  void GCodeLabel::visit(Visitor &v) const {
-    v.visit(*this);
-  }
-
-  void GCodeLabel::dump(std::ostream &os) const {
-    os << "[Label:" << this->label << ' ' << this->getStatement() << ']';
-  }
-
   GCodeCommand::GCodeCommand(std::unique_ptr<GCodeWord> command, std::vector<std::unique_ptr<GCodeWord>> parameters, const SourcePosition &position)
     : GCodeNode::GCodeNode(Type::Command, position), command(std::move(command)), parameters(std::move(parameters)) {}
 
@@ -352,8 +333,8 @@ namespace GCodeLib::Parser {
     }
   }
 
-  GCodeWhileLoop::GCodeWhileLoop(std::unique_ptr<GCodeNode> condition, std::unique_ptr<GCodeNode> body, bool doWhile, const SourcePosition &position)
-    : GCodeNode::GCodeNode(Type::WhileLoop, position), condition(std::move(condition)), body(std::move(body)), doWhileLoop(doWhile) {}
+  GCodeWhileLoop::GCodeWhileLoop(int64_t label, std::unique_ptr<GCodeNode> condition, std::unique_ptr<GCodeNode> body, bool doWhile, const SourcePosition &position)
+    : GCodeLoop(label, position), condition(std::move(condition)), body(std::move(body)), doWhileLoop(doWhile) {}
 
   const GCodeNode &GCodeWhileLoop::getCondition() const {
     return *this->condition;
@@ -373,14 +354,14 @@ namespace GCodeLib::Parser {
 
   void GCodeWhileLoop::dump(std::ostream &os) const {
     if (!this->doWhileLoop) {
-      os << "[while " << this->getCondition() << " do " << this->getBody() << ']';
+      os << '[' << this->getLabel() << ": while " << this->getCondition() << " do " << this->getBody() << ']';
     } else {
-      os << "[do " << this->getBody() << " while " << this->getCondition() << ']';
+      os << '[' << this->getLabel() << ": do " << this->getBody() << " while " << this->getCondition() << ']';
     }
   }
 
-  GCodeRepeatLoop::GCodeRepeatLoop(std::unique_ptr<GCodeNode> counter, std::unique_ptr<GCodeNode> body, const SourcePosition &position)
-    : GCodeNode::GCodeNode(Type::RepeatLoop, position), counter(std::move(counter)), body(std::move(body)) {}
+  GCodeRepeatLoop::GCodeRepeatLoop(int64_t label, std::unique_ptr<GCodeNode> counter, std::unique_ptr<GCodeNode> body, const SourcePosition &position)
+    : GCodeLoop(label, position), counter(std::move(counter)), body(std::move(body)) {}
   
   const GCodeNode &GCodeRepeatLoop::getCounter() const {
     return *this->counter;
@@ -395,13 +376,13 @@ namespace GCodeLib::Parser {
   }
 
   void GCodeRepeatLoop::dump(std::ostream &os) const {
-    os << "[repeat " << this->getBody() << ' ' << this->getCounter() << ']';
+    os << '[' << this->getLabel() << ": repeat " << this->getBody() << ' ' << this->getCounter() << ']';
   }
 
-  GCodeLoopControl::GCodeLoopControl(const std::string &identifier, ControlType controlType, const SourcePosition &position)
+  GCodeLoopControl::GCodeLoopControl(int64_t identifier, ControlType controlType, const SourcePosition &position)
     : GCodeNode::GCodeNode(Type::LoopControl, position), identifier(identifier), controlType(controlType) {}
   
-  const std::string &GCodeLoopControl::getLoopIdentifier() const {
+  int64_t GCodeLoopControl::getLoopIdentifier() const {
     return this->identifier;
   }
 

@@ -14,6 +14,7 @@ namespace GCodeLib::Parser::LinuxCNC {
     G = 'G',
     M = 'M',
     O = 'O',
+    N = 'N',
     F = 'F',
     S = 'S',
     T = 'T',

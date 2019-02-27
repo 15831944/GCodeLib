@@ -18,7 +18,6 @@ namespace GCodeLib::Runtime {
     void visit(const Parser::GCodeWhileLoop &) override;
     void visit(const Parser::GCodeRepeatLoop &) override;
     void visit(const Parser::GCodeConstantValue &) override;
-    void visit(const Parser::GCodeLabel &) override;
     void visit(const Parser::GCodeNumberedVariable &) override;
     void visit(const Parser::GCodeNamedVariable &) override;
     void visit(const Parser::GCodeNumberedVariableAssignment &) override;
@@ -193,36 +192,42 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeWhileLoop &loop) {
+    std::string loopName = this->mangler.getLoop(loop.getLabel());
+    auto &continueLoop = this->module->getNamedLabel(this->mangler.getStatementStart(loopName));
+    auto &breakLoop = this->module->getNamedLabel(this->mangler.getStatementEnd(loopName));
     auto loopStart = this->module->newLabel();
     if (!loop.isDoWhile()) {
-      auto loopEnd = this->module->newLabel();
-      loopEnd->jump();
+      continueLoop.jump();
       loopStart->bind();
       loop.getBody().visit(*this);
-      loopEnd->bind();
     } else {
       loopStart->bind();
       loop.getBody().visit(*this);
     }
+    continueLoop.bind();
     loop.getCondition().visit(*this);
     loopStart->jumpIf();
+    breakLoop.bind();
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeRepeatLoop &loop) {
+    std::string loopName = this->mangler.getLoop(loop.getLabel());
+    auto &continueLoop = this->module->getNamedLabel(this->mangler.getStatementStart(loopName));
+    auto &breakLoop = this->module->getNamedLabel(this->mangler.getStatementEnd(loopName));
     auto loopStart = this->module->newLabel();
-    auto loopEnd = this->module->newLabel();
     loop.getCounter().visit(*this);
-    loopEnd->jump();
+    continueLoop.jump();
     loopStart->bind();
     this->module->appendInstruction(GCodeIROpcode::Push, 1L);
     this->module->appendInstruction(GCodeIROpcode::Subtract);
     loop.getBody().visit(*this);
-    loopEnd->bind();
+    continueLoop.bind();
     this->module->appendInstruction(GCodeIROpcode::Dup);
     this->module->appendInstruction(GCodeIROpcode::Push, 0L);
     this->module->appendInstruction(GCodeIROpcode::Compare);
     this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Greater));
     loopStart->jumpIf();
+    breakLoop.bind();
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeConstantValue &value) {
@@ -231,10 +236,6 @@ namespace GCodeLib::Runtime {
     } else if (value.is(Parser::GCodeNode::Type::FloatContant)) {
       this->module->appendInstruction(GCodeIROpcode::Push, GCodeRuntimeValue(value.asFloat()));
     }
-  }
-
-  void GCodeIRTranslator::Impl::visit(const Parser::GCodeLabel &label) {
-    label.getStatement().visit(*this);
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeNumberedVariable &variable) {
@@ -275,7 +276,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeLoopControl &ctrl) {
-    std::string label = ctrl.getLoopIdentifier();
+    std::string label = this->mangler.getLoop(ctrl.getLoopIdentifier());
     switch (ctrl.getControlType()) {
       case Parser::GCodeLoopControl::ControlType::Break:
         label = this->mangler.getStatementEnd(label);

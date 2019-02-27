@@ -28,7 +28,7 @@ namespace GCodeLib::Parser::LinuxCNC {
 
     [[noreturn]]
     void error(const std::string &);
-    void shift();
+    void shift(std::size_t = 1);
 
     std::optional<SourcePosition> position();
     GCodeToken tokenAt(std::size_t = 0);
@@ -48,6 +48,8 @@ namespace GCodeLib::Parser::LinuxCNC {
     bool checkFlowCommand();
     bool checkFlowCommandFinalizer();
     std::unique_ptr<GCodeNode> nextFlowCommand();
+    bool checkNumberedStatement();
+    std::unique_ptr<GCodeNode> nextNumberedStatement();
     bool checkConditional();
     std::unique_ptr<GCodeNode> nextConditional(int64_t);
     bool checkWhileLoop();

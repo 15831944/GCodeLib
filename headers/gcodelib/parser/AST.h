@@ -21,7 +21,6 @@ namespace GCodeLib::Parser {
       BinaryOperation,
       FunctionCall,
       Word,
-      Label,
       Command,
       Block,
       NamedStatement,
@@ -186,19 +185,6 @@ namespace GCodeLib::Parser {
     std::unique_ptr<GCodeNode> rightArgument;
   };
 
-  class GCodeLabel : public GCodeNode {
-   public:
-    GCodeLabel(int64_t, std::unique_ptr<GCodeNode>, const SourcePosition &);
-    int64_t getLabel() const;
-    const GCodeNode &getStatement() const;
-    void visit(Visitor &) const override;
-   protected:
-    void dump(std::ostream &) const override;
-   private:
-    int64_t label;
-    std::unique_ptr<GCodeNode> statement;
-  };
-
   class GCodeFunctionCall : public GCodeNode {
    public:
     GCodeFunctionCall(const std::string &, std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
@@ -316,9 +302,22 @@ namespace GCodeLib::Parser {
     std::unique_ptr<GCodeNode> elseBody;
   };
 
-  class GCodeWhileLoop : public GCodeNode {
+  template <GCodeNode::Type NodeType, typename Label>
+  class GCodeLoop : public GCodeNode {
    public:
-    GCodeWhileLoop(std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, bool, const SourcePosition &);
+    GCodeLoop(Label label, const SourcePosition &position)
+      : GCodeNode::GCodeNode(NodeType, position), label(label) {}
+    
+    Label getLabel() const {
+      return this->label;
+    }
+   private:
+    Label label;
+  };
+
+  class GCodeWhileLoop : public GCodeLoop<GCodeNode::Type::WhileLoop, int64_t> {
+   public:
+    GCodeWhileLoop(int64_t, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, bool, const SourcePosition &);
     const GCodeNode &getCondition() const;
     const GCodeNode &getBody() const;
     bool isDoWhile() const;
@@ -331,9 +330,9 @@ namespace GCodeLib::Parser {
     bool doWhileLoop;
   };
 
-  class GCodeRepeatLoop : public GCodeNode {
+  class GCodeRepeatLoop : public GCodeLoop<GCodeNode::Type::RepeatLoop, int64_t> {
    public:
-    GCodeRepeatLoop(std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);
+    GCodeRepeatLoop(int64_t, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);
     const GCodeNode &getCounter() const;
     const GCodeNode &getBody() const;
     void visit(Visitor &) const override;
@@ -351,14 +350,14 @@ namespace GCodeLib::Parser {
       Continue
     };
 
-    GCodeLoopControl(const std::string &, ControlType, const SourcePosition &);
-    const std::string &getLoopIdentifier() const;
+    GCodeLoopControl(int64_t, ControlType, const SourcePosition &);
+    int64_t getLoopIdentifier() const;
     ControlType getControlType() const;
     void visit(Visitor &) const override;
    protected:
     void dump(std::ostream &) const override;
    private:
-    std::string identifier;
+    int64_t identifier;
     ControlType controlType;
   };
 
@@ -372,7 +371,6 @@ namespace GCodeLib::Parser {
     virtual void visit(const GCodeBinaryOperation &) {}
     virtual void visit(const GCodeFunctionCall &) {}
     virtual void visit(const GCodeWord &) {}
-    virtual void visit(const GCodeLabel &) {}
     virtual void visit(const GCodeCommand &) {}
     virtual void visit(const GCodeBlock &) {}
     virtual void visit(const GCodeNamedStatement &) {}
