@@ -231,7 +231,10 @@ namespace GCodeLib  {
       this->expectToken(GCodeToken::Type::IntegerContant, 1) &&
       (this->expectKeyword(GCodeKeyword::Sub, 2) ||
       this->expectKeyword(GCodeKeyword::If, 2) ||
-      this->expectKeyword(GCodeKeyword::While, 2) ||
+      (this->expectKeyword(GCodeKeyword::While, 2) &&
+        (this->openedStatements.empty() || this->openedStatements.top() != this->tokenAt(1).getInteger())) ||
+      this->expectKeyword(GCodeKeyword::Do, 2) ||
+      this->expectKeyword(GCodeKeyword::Repeat, 2) ||
       this->expectKeyword(GCodeKeyword::Return, 2));
   }
 
@@ -242,7 +245,10 @@ namespace GCodeLib  {
       this->expectKeyword(GCodeKeyword::Elseif, 2) ||
       this->expectKeyword(GCodeKeyword::Else, 2) ||
       this->expectKeyword(GCodeKeyword::Endif, 2) ||
-      this->expectKeyword(GCodeKeyword::Endwhile, 2));
+      (this->expectKeyword(GCodeKeyword::While, 2) &&
+        !this->openedStatements.empty() && this->openedStatements.top() == this->tokenAt(1).getInteger()) ||
+      this->expectKeyword(GCodeKeyword::Endwhile, 2) ||
+      this->expectKeyword(GCodeKeyword::Endrepeat, 2));
   }
 
   std::unique_ptr<GCodeNode> GCodeParser::nextFlowCommand() {
@@ -252,18 +258,25 @@ namespace GCodeLib  {
       this->error("Integer constant expected");
     }
     int64_t id = this->tokenAt().getInteger();
+    this->openedStatements.push(id);
     this->shift();
+    std::unique_ptr<GCodeNode> stmt;
     if (this->checkProcedure()) {
-      return this->nextProcedure(id);
+      stmt = this->nextProcedure(id);
     } else if (this->checkConditional()) {
-      return this->nextConditional(id);
+      stmt = this->nextConditional(id);
     } else if (this->checkWhileLoop()) {
-      return this->nextWhileLoop(id);
+      stmt = this->nextWhileLoop(id);
+    } else if (this->checkRepeatLoop()) {
+      stmt = this->nextRepeatLoop(id);
     } else if (this->checkProcedureReturn()) {
-      return this->nextProcedureReturn();
+      stmt = this->nextProcedureReturn();
     } else {
+      this->openedStatements.pop();
       this->error("Unknown flow command");
     }
+    this->openedStatements.pop();
+    return stmt;
   }
 
   bool GCodeParser::checkProcedureReturn() {
@@ -334,24 +347,61 @@ namespace GCodeLib  {
   }
 
   bool GCodeParser::checkWhileLoop() {
-    return this->expectKeyword(GCodeKeyword::While);
+    return this->expectKeyword(GCodeKeyword::While) ||
+      this->expectKeyword(GCodeKeyword::Do  );
   }
 
   std::unique_ptr<GCodeNode> GCodeParser::nextWhileLoop(int64_t id) {
     auto position = this->position();
     this->assert(&GCodeParser::checkWhileLoop, "Expected while loop");
+    if (this->expectKeyword(GCodeKeyword::While)) {
+      this->shift();
+      std::unique_ptr<GCodeNode> conditional = this->nextExpression();
+      std::unique_ptr<GCodeNode> body = this->nextBlock();
+      if (!(this->expectOperator(GCodeOperator::O) &&
+        this->expectInteger(id, 1) &&
+        this->expectKeyword(GCodeKeyword::Endwhile, 2))) {
+        this->error("\'endwhile\' expected");
+      }
+      this->shift();
+      this->shift();
+      this->shift();
+      return std::make_unique<GCodeWhileLoop>(std::move(conditional), std::move(body), false, position.value());
+    } else {
+      this->shift();
+      std::unique_ptr<GCodeNode> body = this->nextBlock();
+      if (!(this->expectOperator(GCodeOperator::O) &&
+        this->expectInteger(id, 1) &&
+        this->expectKeyword(GCodeKeyword::While, 2))) {
+        this->error("\'while\' expected");
+      }
+      this->shift();
+      this->shift();
+      this->shift();
+      std::unique_ptr<GCodeNode> conditional = this->nextExpression();
+      return std::make_unique<GCodeWhileLoop>(std::move(conditional), std::move(body), true, position.value());
+    }
+  }
+
+  bool GCodeParser::checkRepeatLoop() {
+    return this->expectKeyword(GCodeKeyword::Repeat);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextRepeatLoop(int64_t id) {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkRepeatLoop, "Expected repeat loop");
     this->shift();
-    std::unique_ptr<GCodeNode> conditional = this->nextExpression();
+    std::unique_ptr<GCodeNode> counter = this->nextExpression();
     std::unique_ptr<GCodeNode> body = this->nextBlock();
     if (!(this->expectOperator(GCodeOperator::O) &&
       this->expectInteger(id, 1) &&
-      this->expectKeyword(GCodeKeyword::Endwhile, 2))) {
-      this->error("\'endwhile\' expected");
+      this->expectKeyword(GCodeKeyword::Endrepeat, 2))) {
+      this->error("\'endrepeat\' expected");
     }
     this->shift();
     this->shift();
     this->shift();
-    return std::make_unique<GCodeWhileLoop>(std::move(conditional), std::move(body), position.value());
+    return std::make_unique<GCodeRepeatLoop>(std::move(counter), std::move(body), position.value());
   }
 
   bool GCodeParser::checkProcedure() {

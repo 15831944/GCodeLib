@@ -72,7 +72,10 @@ namespace GCodeLib {
     Else,
     Endif,
     While,
-    Endwhile
+    Endwhile,
+    Do,
+    Repeat,
+    Endrepeat
   };
 
   class GCodeToken {

@@ -90,6 +90,9 @@ namespace GCodeLib {
             frame.getScope().getNumbered().put(argc, frame.pop());
           }
         } break;
+        case GCodeIROpcode::Dup:
+          frame.dup();
+          break;
         case GCodeIROpcode::Negate:
           frame.negate();
           break;

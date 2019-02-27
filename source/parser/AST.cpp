@@ -333,8 +333,8 @@ namespace GCodeLib {
     }
   }
 
-  GCodeWhileLoop::GCodeWhileLoop(std::unique_ptr<GCodeNode> condition, std::unique_ptr<GCodeNode> body, const SourcePosition &position)
-    : GCodeNode::GCodeNode(Type::WhileLoop, position), condition(std::move(condition)), body(std::move(body)) {}
+  GCodeWhileLoop::GCodeWhileLoop(std::unique_ptr<GCodeNode> condition, std::unique_ptr<GCodeNode> body, bool doWhile, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::WhileLoop, position), condition(std::move(condition)), body(std::move(body)), doWhileLoop(doWhile) {}
 
   GCodeNode &GCodeWhileLoop::getCondition() const {
     return *this->condition;
@@ -344,11 +344,38 @@ namespace GCodeLib {
     return *this->body;
   }
 
+  bool GCodeWhileLoop::isDoWhile() const {
+    return this->doWhileLoop;
+  }
+
   void GCodeWhileLoop::visit(Visitor &v) {
     v.visit(*this);
   }
 
   void GCodeWhileLoop::dump(std::ostream &os) const {
-    os << "[while " << this->getCondition() << " do " << this->getBody() << ']';
+    if (!this->doWhileLoop) {
+      os << "[while " << this->getCondition() << " do " << this->getBody() << ']';
+    } else {
+      os << "[do " << this->getBody() << " while " << this->getCondition() << ']';
+    }
+  }
+
+  GCodeRepeatLoop::GCodeRepeatLoop(std::unique_ptr<GCodeNode> counter, std::unique_ptr<GCodeNode> body, const SourcePosition &position)
+    : GCodeNode::GCodeNode(Type::RepeatLoop, position), counter(std::move(counter)), body(std::move(body)) {}
+  
+  GCodeNode &GCodeRepeatLoop::getCounter() const {
+    return *this->counter;
+  }
+
+  GCodeNode &GCodeRepeatLoop::getBody() const {
+    return *this->body;
+  }
+
+  void GCodeRepeatLoop::visit(Visitor &v) {
+    v.visit(*this);
+  }
+
+  void GCodeRepeatLoop::dump(std::ostream &os) const {
+    os << "[repeat " << this->getBody() << ' ' << this->getCounter() << ']';
   }
 }

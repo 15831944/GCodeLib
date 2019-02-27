@@ -26,6 +26,7 @@ namespace GCodeLib {
     LoadNamed,
     StoreNamed,
 
+    Dup,
     Negate,
     Add,
     Subtract,

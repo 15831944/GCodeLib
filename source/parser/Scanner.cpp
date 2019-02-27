@@ -28,6 +28,9 @@ namespace GCodeLib {
     { "endif", GCodeKeyword::Endif },
     { "while", GCodeKeyword::While },
     { "endwhile", GCodeKeyword::Endwhile },
+    { "do", GCodeKeyword::Do },
+    { "repeat", GCodeKeyword::Repeat },
+    { "endrepeat", GCodeKeyword::Endrepeat }
   };
 
   static std::regex Whitespaces(R"(^[\s]+)");

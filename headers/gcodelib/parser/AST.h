@@ -30,7 +30,8 @@ namespace GCodeLib {
       NumberedAssignment,
       NamedAssignment,
       Conditional,
-      WhileLoop
+      WhileLoop,
+      RepeatLoop
     };
 
     class Visitor;
@@ -302,14 +303,29 @@ namespace GCodeLib {
 
   class GCodeWhileLoop : public GCodeNode {
    public:
-    GCodeWhileLoop(std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);
+    GCodeWhileLoop(std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, bool, const SourcePosition &);
     GCodeNode &getCondition() const;
     GCodeNode &getBody() const;
+    bool isDoWhile() const;
     void visit(Visitor &) override;
    protected:
     void dump(std::ostream &) const override;
    private:
     std::unique_ptr<GCodeNode> condition;
+    std::unique_ptr<GCodeNode> body;
+    bool doWhileLoop;
+  };
+
+  class GCodeRepeatLoop : public GCodeNode {
+   public:
+    GCodeRepeatLoop(std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);
+    GCodeNode &getCounter() const;
+    GCodeNode &getBody() const;
+    void visit(Visitor &) override;
+   protected:
+    void dump(std::ostream &) const override;
+   private:
+    std::unique_ptr<GCodeNode> counter;
     std::unique_ptr<GCodeNode> body;
   };
 
@@ -331,6 +347,7 @@ namespace GCodeLib {
     virtual void visit(const GCodeProcedureCall &) {}
     virtual void visit(const GCodeConditional &) {}
     virtual void visit(const GCodeWhileLoop &) {}
+    virtual void visit(const GCodeRepeatLoop &) {}
     virtual void visit(const GCodeNumberedVariableAssignment &) {}
     virtual void visit(const GCodeNamedVariableAssignment &) {}
   };

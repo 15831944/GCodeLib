@@ -15,6 +15,7 @@ namespace GCodeLib {
     void visit(const GCodeProcedureCall &) override;
     void visit(const GCodeConditional &) override;
     void visit(const GCodeWhileLoop &) override;
+    void visit(const GCodeRepeatLoop &) override;
     void visit(const GCodeConstantValue &) override;
     void visit(const GCodeLabel &) override;
     void visit(const GCodeNumberedVariable &) override;
@@ -184,12 +185,34 @@ namespace GCodeLib {
 
   void GCodeIRTranslator::Impl::visit(const GCodeWhileLoop &loop) {
     auto loopStart = this->module->newLabel();
+    if (!loop.isDoWhile()) {
+      auto loopEnd = this->module->newLabel();
+      loopEnd->jump();
+      loopStart->bind();
+      loop.getBody().visit(*this);
+      loopEnd->bind();
+    } else {
+      loopStart->bind();
+      loop.getBody().visit(*this);
+    }
+    loop.getCondition().visit(*this);
+    loopStart->jumpIf();
+  }
+
+  void GCodeIRTranslator::Impl::visit(const GCodeRepeatLoop &loop) {
+    auto loopStart = this->module->newLabel();
     auto loopEnd = this->module->newLabel();
+    loop.getCounter().visit(*this);
     loopEnd->jump();
     loopStart->bind();
+    this->module->appendInstruction(GCodeIROpcode::Push, 1L);
+    this->module->appendInstruction(GCodeIROpcode::Subtract);
     loop.getBody().visit(*this);
     loopEnd->bind();
-    loop.getCondition().visit(*this);
+    this->module->appendInstruction(GCodeIROpcode::Dup);
+    this->module->appendInstruction(GCodeIROpcode::Push, 0L);
+    this->module->appendInstruction(GCodeIROpcode::Compare);
+    this->module->appendInstruction(GCodeIROpcode::Test, static_cast<int64_t>(GCodeCompare::Greater));
     loopStart->jumpIf();
   }
 

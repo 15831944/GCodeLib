@@ -6,6 +6,7 @@
 #include <functional>
 #include <set>
 #include <memory>
+#include <stack>
 
 namespace GCodeLib {
 
@@ -42,6 +43,8 @@ namespace GCodeLib {
     std::unique_ptr<GCodeNode> nextConditional(int64_t);
     bool checkWhileLoop();
     std::unique_ptr<GCodeNode> nextWhileLoop(int64_t);
+    bool checkRepeatLoop();
+    std::unique_ptr<GCodeNode> nextRepeatLoop(int64_t);
     bool checkProcedure();
     std::unique_ptr<GCodeNode> nextProcedure(int64_t);
     bool checkProcedureCall();
@@ -79,6 +82,7 @@ namespace GCodeLib {
 
     std::shared_ptr<GCodeParser::FilteredScanner> scanner;
     std::optional<GCodeToken> tokens[3];
+    std::stack<int64_t> openedStatements;
   };
 }
 
