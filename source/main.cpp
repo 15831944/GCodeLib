@@ -24,9 +24,10 @@ class TestInterpreter : public GCodeInterpreter {
 int main(int argc, const char **argv) {
   std::ifstream is(argv[1]);
   GCodeDefaultScanner scanner(is);
-  GCodeParser parser(scanner);
+  GCodeLCNCMangler mangler;
+  GCodeParser parser(scanner, mangler);
   auto root = parser.parse();
-  GCodeIRTranslator translator;
+  GCodeIRTranslator translator(mangler);
   auto ir = translator.translate(*root);
   TestInterpreter interp(*ir);
   interp.execute();

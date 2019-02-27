@@ -66,8 +66,8 @@ namespace GCodeLib::Parser::LinuxCNC  {
     GCodeScanner &scanner;
   };
 
-  GCodeParser::GCodeParser(GCodeScanner &scanner)
-    : scanner(std::make_unique<FilteredScanner>(scanner)) {
+  GCodeParser::GCodeParser(GCodeScanner &scanner, GCodeNameMangler &mangler)
+    : scanner(std::make_unique<FilteredScanner>(scanner)), mangler(mangler) {
     this->tokens[0] = this->scanner->next();
     this->tokens[1] = this->scanner->next();
     this->tokens[2] = this->scanner->next();
@@ -362,7 +362,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
   std::unique_ptr<GCodeNode> GCodeParser::nextWhileLoop(int64_t id) {
     auto position = this->position();
     this->assert(&GCodeParser::checkWhileLoop, "Expected while loop");
-    std::string loopName = "while_loop_" + std::to_string(id);
+    std::string loopName = this->mangler.getLoop(id);
     if (this->expectKeyword(GCodeKeyword::While)) {
       this->shift();
       std::unique_ptr<GCodeNode> conditional = this->nextExpression();
@@ -399,6 +399,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
   std::unique_ptr<GCodeNode> GCodeParser::nextRepeatLoop(int64_t id) {
     auto position = this->position();
     this->assert(&GCodeParser::checkRepeatLoop, "Expected repeat loop");
+    std::string loopName = this->mangler.getLoop(id);
     this->shift();
     std::unique_ptr<GCodeNode> counter = this->nextExpression();
     std::unique_ptr<GCodeNode> body = this->nextBlock();
@@ -410,7 +411,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
     this->shift();
     this->shift();
     this->shift();
-    return std::make_unique<GCodeRepeatLoop>(std::move(counter), std::move(body), position.value());
+    return std::make_unique<GCodeNamedStatement>(loopName, std::make_unique<GCodeRepeatLoop>(std::move(counter), std::move(body), position.value()), position.value());
   }
 
   bool GCodeParser::checkProcedure() {
@@ -469,7 +470,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
   std::unique_ptr<GCodeNode> GCodeParser::nextLoopControl(int64_t id) {
     auto position = this->position();
     this->assert(&GCodeParser::checkLoopControl, "Expected \'break\' or \'continue\'");
-    std::string loopName = "while_loop_" + std::to_string(id);
+    std::string loopName = this->mangler.getLoop(id);
     GCodeKeyword kw = this->tokenAt().getKeyword();
     this->shift();
     switch (kw) {

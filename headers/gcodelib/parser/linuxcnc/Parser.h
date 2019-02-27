@@ -2,6 +2,7 @@
 #define GCODELIB_PARSER_LINUXCNC_PARSER_H_
 
 #include "gcodelib/parser/AST.h"
+#include "gcodelib/parser/Mangling.h"
 #include "gcodelib/parser/linuxcnc/Scanner.h"
 #include <functional>
 #include <set>
@@ -10,10 +11,18 @@
 
 namespace GCodeLib::Parser::LinuxCNC {
 
+  class GCodeLCNCMangler : public GCodeNameMangler {
+   public:
+    std::string getProcedureName(const std::string &) const override;
+    std::string getStatementStart(const std::string &) const override;
+    std::string getStatementEnd(const std::string &) const override;
+    std::string getLoop(const std::string &) const override;
+  };
+
   class GCodeParser {
     struct FilteredScanner;
    public:
-    GCodeParser(GCodeScanner &);
+    GCodeParser(GCodeScanner &, GCodeNameMangler &);
     std::unique_ptr<GCodeBlock> parse();
    private:
 
@@ -85,6 +94,7 @@ namespace GCodeLib::Parser::LinuxCNC {
     std::shared_ptr<GCodeParser::FilteredScanner> scanner;
     std::optional<GCodeToken> tokens[3];
     std::stack<int64_t> openedStatements;
+    GCodeNameMangler &mangler;
   };
 }
 

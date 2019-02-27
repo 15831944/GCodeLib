@@ -3,12 +3,13 @@
 
 #include "gcodelib/runtime/IR.h"
 #include "gcodelib/parser/AST.h"
+#include "gcodelib/parser/Mangling.h"
 
 namespace GCodeLib::Runtime {
 
   class GCodeIRTranslator  {
    public:
-    GCodeIRTranslator();
+    GCodeIRTranslator(Parser::GCodeNameMangler &);
     std::unique_ptr<GCodeIRModule> translate(const Parser::GCodeBlock &);
    private:
     class Impl;

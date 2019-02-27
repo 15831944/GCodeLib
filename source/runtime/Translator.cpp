@@ -5,6 +5,7 @@ namespace GCodeLib::Runtime {
 
   class GCodeIRTranslator::Impl : public Parser::GCodeNode::Visitor {
    public:
+    Impl(Parser::GCodeNameMangler &);
     std::unique_ptr<GCodeIRModule> translate(const Parser::GCodeBlock &);
     void visit(const Parser::GCodeBlock &) override;
     void visit(const Parser::GCodeCommand &) override;
@@ -27,14 +28,18 @@ namespace GCodeLib::Runtime {
     void visit(const Parser::GCodeLoopControl &) override;
    private:
     std::unique_ptr<GCodeIRModule> module;
+    Parser::GCodeNameMangler &mangler;
   };
 
-  GCodeIRTranslator::GCodeIRTranslator()
-    : impl(std::make_shared<Impl>()) {}
+  GCodeIRTranslator::GCodeIRTranslator(Parser::GCodeNameMangler &mangler)
+    : impl(std::make_shared<Impl>(mangler)) {}
 
   std::unique_ptr<GCodeIRModule> GCodeIRTranslator::translate(const Parser::GCodeBlock &ast) {
     return this->impl->translate(ast);
   }
+
+  GCodeIRTranslator::Impl::Impl(Parser::GCodeNameMangler &mangler)
+    : mangler(mangler) {}
 
   std::unique_ptr<GCodeIRModule> GCodeIRTranslator::Impl::translate(const Parser::GCodeBlock &ast) {
     this->module = std::make_unique<GCodeIRModule>();
@@ -145,7 +150,7 @@ namespace GCodeLib::Runtime {
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeProcedureDefinition &definition) {
     auto label = this->module->newLabel();
     label->jump();
-    std::string procedureName = "procedure" + std::to_string(definition.getIdentifier());
+    std::string procedureName = this->mangler.getProcedureName(definition.getIdentifier());
     auto &proc = this->module->getNamedLabel(procedureName);
     this->module->registerProcedure(definition.getIdentifier(), procedureName);
     proc.bind();
@@ -262,8 +267,8 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeNamedStatement &stmt) {
-    auto &start = this->module->getNamedLabel(stmt.getIdentifier() + "_start");
-    auto &end = this->module->getNamedLabel(stmt.getIdentifier() + "_end");
+    auto &start = this->module->getNamedLabel(this->mangler.getStatementStart(stmt.getIdentifier()));
+    auto &end = this->module->getNamedLabel(this->mangler.getStatementEnd(stmt.getIdentifier()));
     start.bind();
     stmt.getStatement().visit(*this);
     end.bind();
@@ -273,10 +278,10 @@ namespace GCodeLib::Runtime {
     std::string label = ctrl.getLoopIdentifier();
     switch (ctrl.getControlType()) {
       case Parser::GCodeLoopControl::ControlType::Break:
-        label += "_end";
+        label = this->mangler.getStatementEnd(label);
         break;
       case Parser::GCodeLoopControl::ControlType::Continue:
-        label += "_start";
+        label = this->mangler.getStatementStart(label);
         break;
     }
     auto &dest = this->module->getNamedLabel(label);
