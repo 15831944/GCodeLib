@@ -4,6 +4,7 @@
 #include "gcodelib/parser/AST.h"
 #include "gcodelib/parser/Mangling.h"
 #include "gcodelib/parser/linuxcnc/Scanner.h"
+#include "gcodelib/parser/Parser.h"
 #include <functional>
 #include <set>
 #include <memory>
@@ -19,25 +20,28 @@ namespace GCodeLib::Parser::LinuxCNC {
     std::string getLoop(const std::string &) const override;
   };
 
-  class GCodeParser {
-    struct FilteredScanner;
+  class GCodeFilteredScanner : public GCodeScanner {
+   public:
+    GCodeFilteredScanner(GCodeScanner &);
+
+    std::optional<GCodeToken> next() override;
+    bool finished() override;
+   private:
+    GCodeScanner &scanner;
+  };
+
+  class GCodeParser;
+
+  class GCodeParser : public GCodeParserBase<GCodeParser, std::shared_ptr<GCodeFilteredScanner>, GCodeToken, 3> {
    public:
     GCodeParser(GCodeScanner &, GCodeNameMangler &);
     std::unique_ptr<GCodeBlock> parse();
    private:
-
-    [[noreturn]]
-    void error(const std::string &);
-    void shift(std::size_t = 1);
-
-    std::optional<SourcePosition> position();
-    GCodeToken tokenAt(std::size_t = 0);
     bool expectToken(GCodeToken::Type, std::size_t = 0);
     bool expectOperator(GCodeOperator, std::size_t = 0);
     bool expectOperators(const std::set<GCodeOperator> &, std::size_t = 0);
     bool expectKeyword(GCodeKeyword, std::size_t = 0);
     bool expectInteger(int64_t, std::size_t = 0);
-    void assert(bool (GCodeParser::*)(), const std::string &);
 
     bool checkBlock();
     std::unique_ptr<GCodeBlock> nextBlock();
@@ -93,10 +97,7 @@ namespace GCodeLib::Parser::LinuxCNC {
     bool checkConstant();
     std::unique_ptr<GCodeConstantValue> nextConstant();
 
-    std::shared_ptr<GCodeParser::FilteredScanner> scanner;
-    std::optional<GCodeToken> tokens[3];
     std::stack<int64_t> openedStatements;
-    GCodeNameMangler &mangler;
   };
 }
 

@@ -34,79 +34,38 @@ namespace GCodeLib::Parser::LinuxCNC  {
     GCodeOperator::Z
   };
 
+  GCodeFilteredScanner::GCodeFilteredScanner(GCodeScanner &scanner)
+    : scanner(scanner) {}
 
-  class GCodeParser::FilteredScanner : public GCodeScanner {
-   public:
-    FilteredScanner(GCodeScanner &scanner)
-      : scanner(scanner) {}
-
-    std::optional<GCodeToken> next() override {
-      std::optional<GCodeToken> token;
-      while (!token.has_value() && !this->finished()) {
-        token = this->scanner.next();
-        if (!token.has_value()) {
-          continue;
-        }
-        GCodeToken &tok = token.value();
-        if (tok.is(GCodeToken::Type::Comment) ||
-          (tok.is(GCodeToken::Type::Keyword) && (
-            tok.getKeyword() == GCodeKeyword::None)) ||
-          (tok.is(GCodeToken::Type::Operator) &&
-            (tok.getOperator() == GCodeOperator::Percent ||
-            tok.getOperator() == GCodeOperator::None))) {
-          token.reset();
-        }
+  std::optional<GCodeToken> GCodeFilteredScanner::next() {
+    std::optional<GCodeToken> token;
+    while (!token.has_value() && !this->finished()) {
+      token = this->scanner.next();
+      if (!token.has_value()) {
+        continue;
       }
-      return token;
+      GCodeToken &tok = token.value();
+      if (tok.is(GCodeToken::Type::Comment) ||
+        (tok.is(GCodeToken::Type::Keyword) && (
+          tok.getKeyword() == GCodeKeyword::None)) ||
+        (tok.is(GCodeToken::Type::Operator) &&
+          (tok.getOperator() == GCodeOperator::Percent ||
+          tok.getOperator() == GCodeOperator::None))) {
+        token.reset();
+      }
     }
-    bool finished() override {
-      return this->scanner.finished();
-    }
-   private:
-    GCodeScanner &scanner;
-  };
+    return token;
+  }
+
+  bool GCodeFilteredScanner::finished() {
+    return this->scanner.finished();
+  }
 
   GCodeParser::GCodeParser(GCodeScanner &scanner, GCodeNameMangler &mangler)
-    : scanner(std::make_unique<FilteredScanner>(scanner)), mangler(mangler) {
-    this->tokens[0] = this->scanner->next();
-    this->tokens[1] = this->scanner->next();
-    this->tokens[2] = this->scanner->next();
-  }
+    : GCodeParserBase(std::make_unique<GCodeFilteredScanner>(scanner), mangler) {}
 
   std::unique_ptr<GCodeBlock> GCodeParser::parse() {
     return this->nextBlock();
-  }
-
-  void GCodeParser::error(const std::string &msg) {
-    if (this->tokens[0].has_value()) {
-      throw GCodeParseException(msg, this->tokens[0].value().getPosition());
-    } else {
-      throw GCodeParseException(msg);
-    }
-  }
-
-  void GCodeParser::shift(std::size_t count) {
-    while (count--) {
-      this->tokens[0] = std::move(this->tokens[1]);
-      this->tokens[1] = this->tokens[2];
-      this->tokens[2] = this->scanner->next();
-    }
-  }
-
-  std::optional<SourcePosition> GCodeParser::position() {
-    if (this->tokens[0].has_value()) {
-      return this->tokens[0].value().getPosition();
-    } else {
-      return std::optional<SourcePosition>();
-    }
-  }
-
-  GCodeToken GCodeParser::tokenAt(std::size_t idx) {
-    if (this->tokens[idx].has_value()) {
-      return this->tokens[idx].value();
-    } else {
-      throw GCodeParseException("Expected token");
-    }
   }
 
   bool GCodeParser::expectToken(GCodeToken::Type type, std::size_t idx) {
@@ -131,12 +90,6 @@ namespace GCodeLib::Parser::LinuxCNC  {
   bool GCodeParser::expectInteger(int64_t value, std::size_t idx) {
     return this->expectToken(GCodeToken::Type::IntegerContant, idx) &&
       this->tokenAt(idx).getInteger() == value;
-  }
-
-  void GCodeParser::assert(bool (GCodeParser::*assertion)(), const std::string &message) {
-    if (!(this->*assertion)()) {
-      this->error(message);
-    }
   }
 
   bool GCodeParser::checkBlock() {

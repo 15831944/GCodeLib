@@ -47,7 +47,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeBlock &block) {
-    std::vector<std::reference_wrapper<Parser::GCodeNode>> content;
+    std::vector<std::reference_wrapper<const Parser::GCodeNode>> content;
     block.getContent(content);
     for (auto node : content) {
       node.get().visit(*this);
@@ -57,7 +57,7 @@ namespace GCodeLib::Runtime {
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeCommand &cmd) {
     this->module->appendInstruction(GCodeIROpcode::Prologue);
     GCodeSyscallType syscallType = static_cast<GCodeSyscallType>(cmd.getCommand().getField());
-    std::vector<std::reference_wrapper<Parser::GCodeWord>> paramList;
+    std::vector<std::reference_wrapper<const Parser::GCodeWord>> paramList;
     cmd.getParameters(paramList);
     for (auto param : paramList) {
       param.get().getValue().visit(*this);
@@ -135,7 +135,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeFunctionCall &call) {
-    std::vector<std::reference_wrapper<Parser::GCodeNode>> args;
+    std::vector<std::reference_wrapper<const Parser::GCodeNode>> args;
     call.getArguments(args);
     std::reverse(args.begin(), args.end());
     for (auto arg : args) {
@@ -154,7 +154,7 @@ namespace GCodeLib::Runtime {
     this->module->registerProcedure(definition.getIdentifier(), procedureName);
     proc.bind();
     definition.getBody().visit(*this);
-    std::vector<std::reference_wrapper<Parser::GCodeNode>> rets;
+    std::vector<std::reference_wrapper<const Parser::GCodeNode>> rets;
     definition.getReturnValues(rets);
     for (auto ret : rets) {
       ret.get().visit(*this);
@@ -164,7 +164,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeProcedureCall &call) {
-    std::vector<std::reference_wrapper<Parser::GCodeNode>> args;
+    std::vector<std::reference_wrapper<const Parser::GCodeNode>> args;
     call.getArguments(args);
     for (auto arg : args) {
       arg.get().visit(*this);
@@ -259,7 +259,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeProcedureReturn &ret) {
-    std::vector<std::reference_wrapper<Parser::GCodeNode>> rets;
+    std::vector<std::reference_wrapper<const Parser::GCodeNode>> rets;
     ret.getReturnValues(rets);
     for (auto value : rets) {
       value.get().visit(*this);

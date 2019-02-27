@@ -52,25 +52,32 @@ namespace GCodeLib::Parser {
     SourcePosition position;
   };
 
-  class GCodeConstantValue : public GCodeNode {
+  template <typename T>
+  class GCodeVisitableNode : public GCodeNode {
+   public:
+    using GCodeNode::GCodeNode;
+    void visit(Visitor &) const override;
+  };
+
+  class GCodeConstantValue;
+  class GCodeConstantValue : public GCodeVisitableNode<GCodeConstantValue> {
    public:
     GCodeConstantValue(int64_t, const SourcePosition &);
     GCodeConstantValue(double, const SourcePosition &);
 
     int64_t asInteger(int64_t = 0) const;
     double asFloat(double = 0.0) const;
-    void visit(Visitor &) const override;
    protected:
     void dump(std::ostream &) const override;
    private:
     std::variant<int64_t, double> value;
   };
 
-  template <GCodeNode::Type NodeType, typename ValueType>
-  class GCodeVariable : public GCodeNode {
+  template <class Self, GCodeNode::Type NodeType, typename ValueType>
+  class GCodeVariable : public GCodeVisitableNode<Self> {
    public:
     GCodeVariable(const ValueType &identifier, const SourcePosition &position)
-      : GCodeNode::GCodeNode(NodeType, position), identifier(identifier) {}
+      : GCodeVisitableNode<Self>::GCodeVisitableNode(NodeType, position), identifier(identifier) {}
 
     const ValueType &getIdentifier() const {
       return this->identifier;
@@ -82,27 +89,25 @@ namespace GCodeLib::Parser {
   class GCodeNamedVariable;
   class GCodeNumberedVariable;
 
-  class GCodeNamedVariable : public GCodeVariable<GCodeNode::Type::NamedVariable, std::string> {
+  class GCodeNamedVariable : public GCodeVariable<GCodeNamedVariable, GCodeNode::Type::NamedVariable, std::string> {
    public:
-    using GCodeVariable<GCodeNode::Type::NamedVariable, std::string>::GCodeVariable;
-    void visit(Visitor &) const override;
+    using GCodeVariable<GCodeNamedVariable, GCodeNode::Type::NamedVariable, std::string>::GCodeVariable;
    protected:
     void dump(std::ostream &) const override;
   };
 
-  class GCodeNumberedVariable : public GCodeVariable<GCodeNode::Type::NumberedVariable, int64_t> {
+  class GCodeNumberedVariable : public GCodeVariable<GCodeNumberedVariable, GCodeNode::Type::NumberedVariable, int64_t> {
    public:
-    using GCodeVariable<GCodeNode::Type::NumberedVariable, int64_t>::GCodeVariable;
-    void visit(Visitor &) const override;
+    using GCodeVariable<GCodeNumberedVariable, GCodeNode::Type::NumberedVariable, int64_t>::GCodeVariable;
    protected:
     void dump(std::ostream &) const override;
   };
 
-  template <GCodeNode::Type NodeType, typename KeyType>
-  class GCodeVariableAssignment : public GCodeNode {
+  template <class Self, GCodeNode::Type NodeType, typename KeyType>
+  class GCodeVariableAssignment : public GCodeVisitableNode<Self> {
    public:
     GCodeVariableAssignment(const KeyType &key, std::unique_ptr<GCodeNode> value, const SourcePosition &position)
-      : GCodeNode::GCodeNode(NodeType, position), key(key), value(std::move(value)) {}
+      : GCodeVisitableNode<Self>::GCodeVisitableNode(NodeType, position), key(key), value(std::move(value)) {}
     
     const KeyType &getIdentifier() const {
       return this->key;
@@ -119,23 +124,22 @@ namespace GCodeLib::Parser {
   class GCodeNamedVariableAssignment;
   class GCodeNumberedVariableAssignment;
 
-  class GCodeNamedVariableAssignment : public GCodeVariableAssignment<GCodeNode::Type::NamedAssignment, std::string> {
+  class GCodeNamedVariableAssignment : public GCodeVariableAssignment<GCodeNamedVariableAssignment, GCodeNode::Type::NamedAssignment, std::string> {
    public:
-    using GCodeVariableAssignment<GCodeNode::Type::NamedAssignment, std::string>::GCodeVariableAssignment;
-    void visit(Visitor &) const override;
+    using GCodeVariableAssignment<GCodeNamedVariableAssignment, GCodeNode::Type::NamedAssignment, std::string>::GCodeVariableAssignment;
    protected:
     void dump(std::ostream &) const override;
   };
 
-  class GCodeNumberedVariableAssignment : public GCodeVariableAssignment<GCodeNode::Type::NumberedAssignment, int64_t> {
+  class GCodeNumberedVariableAssignment : public GCodeVariableAssignment<GCodeNumberedVariableAssignment, GCodeNode::Type::NumberedAssignment, int64_t> {
    public:
-    using GCodeVariableAssignment<GCodeNode::Type::NumberedAssignment, int64_t>::GCodeVariableAssignment;
-    void visit(Visitor &) const override;
+    using GCodeVariableAssignment<GCodeNumberedVariableAssignment, GCodeNode::Type::NumberedAssignment, int64_t>::GCodeVariableAssignment;
    protected:
     void dump(std::ostream &) const override;
   };
 
-  class GCodeUnaryOperation : public GCodeNode {
+  class GCodeUnaryOperation;
+  class GCodeUnaryOperation : public GCodeVisitableNode<GCodeUnaryOperation> {
    public:
     enum class Operation {
       Negate = '-'
@@ -144,7 +148,6 @@ namespace GCodeLib::Parser {
     GCodeUnaryOperation(Operation, std::unique_ptr<GCodeNode>, const SourcePosition &);
     Operation getOperation() const;
     const GCodeNode &getArgument() const;
-    void visit(Visitor &) const override;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -152,7 +155,8 @@ namespace GCodeLib::Parser {
     std::unique_ptr<GCodeNode> argument;
   };
 
-  class GCodeBinaryOperation : public GCodeNode {
+  class GCodeBinaryOperation;
+  class GCodeBinaryOperation : public GCodeVisitableNode<GCodeBinaryOperation> {
    public:
     enum class Operation {
       Add = '+',
@@ -176,7 +180,6 @@ namespace GCodeLib::Parser {
     Operation getOperation() const;
     const GCodeNode &getLeftArgument() const;
     const GCodeNode &getRightArgument() const;
-    void visit(Visitor &) const override;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -185,12 +188,12 @@ namespace GCodeLib::Parser {
     std::unique_ptr<GCodeNode> rightArgument;
   };
 
-  class GCodeFunctionCall : public GCodeNode {
+  class GCodeFunctionCall;
+  class GCodeFunctionCall : public GCodeVisitableNode<GCodeFunctionCall> {
    public:
     GCodeFunctionCall(const std::string &, std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
     const std::string &getFunctionIdentifier() const;
-    void getArguments(std::vector<std::reference_wrapper<GCodeNode>> &) const;
-    void visit(Visitor &) const override;
+    void getArguments(std::vector<std::reference_wrapper<const GCodeNode>> &) const;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -198,12 +201,12 @@ namespace GCodeLib::Parser {
     std::vector<std::unique_ptr<GCodeNode>> arguments;
   };
 
-  class GCodeWord : public GCodeNode {
+  class GCodeWord;
+  class GCodeWord : public GCodeVisitableNode<GCodeWord> {
    public:
     GCodeWord(unsigned char, std::unique_ptr<GCodeNode>, const SourcePosition &);
     unsigned char getField() const;
     const GCodeNode &getValue() const;
-    void visit(Visitor &) const override;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -211,12 +214,12 @@ namespace GCodeLib::Parser {
     std::unique_ptr<GCodeNode> value;
   };
 
-  class GCodeCommand : public GCodeNode {
+  class GCodeCommand;
+  class GCodeCommand : public GCodeVisitableNode<GCodeCommand> {
    public:
     GCodeCommand(std::unique_ptr<GCodeWord>, std::vector<std::unique_ptr<GCodeWord>>, const SourcePosition &);
-    GCodeWord &getCommand() const;
-    void getParameters(std::vector<std::reference_wrapper<GCodeWord>> &) const;
-    void visit(Visitor &) const override;
+    const GCodeWord &getCommand() const;
+    void getParameters(std::vector<std::reference_wrapper<const GCodeWord>> &) const;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -224,23 +227,23 @@ namespace GCodeLib::Parser {
     std::vector<std::unique_ptr<GCodeWord>> parameters;
   };
 
-  class GCodeBlock : public GCodeNode {
+  class GCodeBlock;
+  class GCodeBlock : public GCodeVisitableNode<GCodeBlock> {
    public:
     GCodeBlock(std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
-    void getContent(std::vector<std::reference_wrapper<GCodeNode>> &) const;
-    void visit(Visitor &) const override;
+    void getContent(std::vector<std::reference_wrapper<const GCodeNode>> &) const;
    protected:
     void dump(std::ostream &) const override;
    private:
     std::vector<std::unique_ptr<GCodeNode>> content;
   };
 
-  class GCodeNamedStatement : public GCodeNode {
+  class GCodeNamedStatement;
+  class GCodeNamedStatement : public GCodeVisitableNode<GCodeNamedStatement> {
    public:
     GCodeNamedStatement(const std::string &, std::unique_ptr<GCodeNode>, const SourcePosition &);
     const std::string &getIdentifier() const;
     const GCodeNode &getStatement() const;
-    void visit(Visitor &) const override;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -248,13 +251,13 @@ namespace GCodeLib::Parser {
     std::unique_ptr<GCodeNode> statement;
   };
 
-  class GCodeProcedureDefinition : public GCodeNode {
+  class GCodeProcedureDefinition;
+  class GCodeProcedureDefinition : public GCodeVisitableNode<GCodeProcedureDefinition> {
    public:
     GCodeProcedureDefinition(int64_t, std::unique_ptr<GCodeNode>, std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
     int64_t getIdentifier() const;
     const GCodeNode &getBody() const;
-    void getReturnValues(std::vector<std::reference_wrapper<GCodeNode>> &) const;
-    void visit(Visitor &) const override;
+    void getReturnValues(std::vector<std::reference_wrapper<const GCodeNode>> &) const;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -263,23 +266,23 @@ namespace GCodeLib::Parser {
     std::vector<std::unique_ptr<GCodeNode>> retValues;
   };
 
-  class GCodeProcedureReturn : public GCodeNode {
+  class GCodeProcedureReturn;
+  class GCodeProcedureReturn : public GCodeVisitableNode<GCodeProcedureReturn> {
    public:
     GCodeProcedureReturn(std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
-    void getReturnValues(std::vector<std::reference_wrapper<GCodeNode>> &) const;
-    void visit(Visitor &) const override;
+    void getReturnValues(std::vector<std::reference_wrapper<const GCodeNode>> &) const;
    protected:
     void dump(std::ostream &) const override;
    private:
     std::vector<std::unique_ptr<GCodeNode>> returnValues;
   };
 
-  class GCodeProcedureCall : public GCodeNode {
+  class GCodeProcedureCall;
+  class GCodeProcedureCall : public GCodeVisitableNode<GCodeProcedureCall> {
    public:
     GCodeProcedureCall(std::unique_ptr<GCodeNode>, std::vector<std::unique_ptr<GCodeNode>>, const SourcePosition &);
     const GCodeNode &getProcedureId() const;
-    void getArguments(std::vector<std::reference_wrapper<GCodeNode>> &) const;
-    void visit(Visitor &) const override;
+    void getArguments(std::vector<std::reference_wrapper<const GCodeNode>> &) const;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -287,13 +290,13 @@ namespace GCodeLib::Parser {
     std::vector<std::unique_ptr<GCodeNode>> args;
   };
 
-  class GCodeConditional : public GCodeNode {
+  class GCodeConditional;
+  class GCodeConditional : public GCodeVisitableNode<GCodeConditional> {
    public:
     GCodeConditional(std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);
     const GCodeNode &getCondition() const;
     const GCodeNode &getThenBody() const;
-    GCodeNode *getElseBody() const;
-    void visit(Visitor &) const override;
+    const GCodeNode *getElseBody() const;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -302,11 +305,11 @@ namespace GCodeLib::Parser {
     std::unique_ptr<GCodeNode> elseBody;
   };
 
-  template <GCodeNode::Type NodeType, typename Label>
-  class GCodeLoop : public GCodeNode {
+  template <class Self, GCodeNode::Type NodeType, typename Label>
+  class GCodeLoop : public GCodeVisitableNode<Self> {
    public:
     GCodeLoop(Label label, const SourcePosition &position)
-      : GCodeNode::GCodeNode(NodeType, position), label(label) {}
+      : GCodeVisitableNode<Self>::GCodeVisitableNode(NodeType, position), label(label) {}
     
     Label getLabel() const {
       return this->label;
@@ -315,13 +318,13 @@ namespace GCodeLib::Parser {
     Label label;
   };
 
-  class GCodeWhileLoop : public GCodeLoop<GCodeNode::Type::WhileLoop, int64_t> {
+  class GCodeWhileLoop;
+  class GCodeWhileLoop : public GCodeLoop<GCodeWhileLoop, GCodeNode::Type::WhileLoop, int64_t> {
    public:
     GCodeWhileLoop(int64_t, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, bool, const SourcePosition &);
     const GCodeNode &getCondition() const;
     const GCodeNode &getBody() const;
     bool isDoWhile() const;
-    void visit(Visitor &) const override;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -330,12 +333,12 @@ namespace GCodeLib::Parser {
     bool doWhileLoop;
   };
 
-  class GCodeRepeatLoop : public GCodeLoop<GCodeNode::Type::RepeatLoop, int64_t> {
+  class GCodeRepeatLoop;
+  class GCodeRepeatLoop : public GCodeLoop<GCodeRepeatLoop, GCodeNode::Type::RepeatLoop, int64_t> {
    public:
     GCodeRepeatLoop(int64_t, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);
     const GCodeNode &getCounter() const;
     const GCodeNode &getBody() const;
-    void visit(Visitor &) const override;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -343,7 +346,8 @@ namespace GCodeLib::Parser {
     std::unique_ptr<GCodeNode> body;
   };
 
-  class GCodeLoopControl : public GCodeNode {
+  class GCodeLoopControl;
+  class GCodeLoopControl : public GCodeVisitableNode<GCodeLoopControl> {
    public:
     enum class ControlType {
       Break,
@@ -353,7 +357,6 @@ namespace GCodeLib::Parser {
     GCodeLoopControl(int64_t, ControlType, const SourcePosition &);
     int64_t getLoopIdentifier() const;
     ControlType getControlType() const;
-    void visit(Visitor &) const override;
    protected:
     void dump(std::ostream &) const override;
    private:
@@ -384,6 +387,11 @@ namespace GCodeLib::Parser {
     virtual void visit(const GCodeNumberedVariableAssignment &) {}
     virtual void visit(const GCodeNamedVariableAssignment &) {}
   };
+
+  template <typename T>
+  void GCodeVisitableNode<T>::visit(Visitor &visitor) const {
+    visitor.visit(*static_cast<const T *>(this));
+  }
 }
 
 #endif
