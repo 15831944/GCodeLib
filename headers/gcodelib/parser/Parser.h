@@ -73,7 +73,7 @@ namespace GCodeLib {
     bool checkIdentifier();
     std::unique_ptr<GCodeNode> nextIdentifier();
     bool checkVariable();
-    std::unique_ptr<GCodeNode> nextVariable();
+    std::unique_ptr<GCodeNode> nextVariableReference();
     bool checkConstant();
     std::unique_ptr<GCodeConstantValue> nextConstant();
 

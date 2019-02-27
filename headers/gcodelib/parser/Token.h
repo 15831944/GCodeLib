@@ -46,6 +46,8 @@ namespace GCodeLib {
     Equal = '=',
     OpeningBracket = '[',
     ClosingBracket = ']',
+    GreaterThan = '>',
+    LessThan = '<',
     None = '\0'
   };
 
