@@ -5,38 +5,53 @@
 #include "gcodelib/runtime/Translator.h"
 #include "gcodelib/parser/linuxcnc/Scanner.h"
 #include "gcodelib/parser/linuxcnc/Parser.h"
+#include "gcodelib/parser/linuxcnc/Validator.h"
+#include <type_traits>
 #include <iosfwd>
 
 namespace GCodeLib {
 
-  template <class Scanner, class Parser, class Mangler>
+  namespace Internal {
+    struct EmptyValidator {};
+  }
+
+  template <class Scanner, class Parser, class Mangler, class Validator = Internal::EmptyValidator>
   class GCodeFrontend {
    public:
     using ScannerType = Scanner;
     using ParserType = Parser;
     using ManglerType = Mangler;
+    using ValidatorType = Validator;
   
     GCodeFrontend()
       : translator(this->mangler) {}
 
-    auto parse(std::istream &is) {
-      Scanner scanner(is);
-      Parser parser(scanner, this->mangler);
-      return parser.parse();
-    }
-
-    auto compile(std::istream &is) {
-      Scanner scanner(is);
+    auto parse(std::istream &is, const std::string &tag = "") {
+      Scanner scanner(is, tag);
       Parser parser(scanner, this->mangler);
       auto ast = parser.parse();
+      if constexpr (!std::is_same<Validator, Internal::EmptyValidator>()) {
+        this->validator.validate(*ast);
+      }
+      return *ast;
+    }
+
+    auto compile(std::istream &is, const std::string &tag = "") {
+      Scanner scanner(is, tag);
+      Parser parser(scanner, this->mangler);
+      auto ast = parser.parse();
+      if constexpr (!std::is_same<Validator, Internal::EmptyValidator>()) {
+        this->validator.validate(*ast);
+      }
       return this->translator.translate(*ast);
     }
    private:
     Mangler mangler;
+    Validator validator;
     Runtime::GCodeIRTranslator translator;
   };
 
-  using GCodeLinuxCNC = GCodeFrontend<Parser::LinuxCNC::GCodeDefaultScanner, Parser::LinuxCNC::GCodeParser, Parser::LinuxCNC::GCodeLCNCMangler>;
+  using GCodeLinuxCNC = GCodeFrontend<Parser::LinuxCNC::GCodeDefaultScanner, Parser::LinuxCNC::GCodeParser, Parser::LinuxCNC::GCodeLCNCMangler, Parser::LinuxCNC::GCodeLCNCValidator>;
 }
 
 #endif

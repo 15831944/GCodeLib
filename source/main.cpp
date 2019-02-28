@@ -2,6 +2,7 @@
 #include <iostream>
 #include "gcodelib/Frontend.h"
 #include "gcodelib/runtime/Interpreter.h"
+#include "gcodelib/runtime/Error.h"
 #include <fstream>
 
 using namespace GCodeLib;
@@ -34,10 +35,21 @@ class TestInterpreter : public GCodeInterpreter {
 };
 
 int main(int argc, const char **argv) {
-  std::ifstream is(argv[1]);
-  GCodeLinuxCNC compiler;
-  auto ir = compiler.compile(is);
-  TestInterpreter interp(*ir);
-  interp.execute();
+  try {
+    std::ifstream is(argv[1]);
+    GCodeLinuxCNC compiler;
+    auto ir = compiler.compile(is, std::string(argv[1]));
+    is.close();
+    TestInterpreter interp(*ir);
+    interp.execute();
+  } catch (Parser::GCodeParseException &ex) {
+    if (ex.getLocation().has_value()) {
+      std::cout << "Compile error at " << ex.getLocation().value() << std::endl << '\t' << ex.getMessage() << std::endl;
+    } else {
+      std::cout << "Compile error" << std::endl << '\t' << ex.getMessage() << std::endl;
+    }
+  } catch (GCodeRuntimeError &ex) {
+    std::cout << "Runtime error" << std::endl << '\t' << ex.getMessage() << std::endl;
+  }
   return EXIT_SUCCESS;
 }

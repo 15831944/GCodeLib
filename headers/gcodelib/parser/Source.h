@@ -3,6 +3,7 @@
 
 #include "gcodelib/Base.h"
 #include <string>
+#include <iosfwd>
 
 namespace GCodeLib::Parser {
 
@@ -16,6 +17,8 @@ namespace GCodeLib::Parser {
     uint8_t getChecksum() const;
 
     void update(uint32_t, uint16_t, uint8_t);
+
+    friend std::ostream &operator<<(std::ostream &, const SourcePosition &);
    private:
     std::string tag;
     uint32_t line;

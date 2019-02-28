@@ -12,7 +12,7 @@ namespace GCodeLib::Parser::LinuxCNC {
 
   class GCodeDefaultScanner : public GCodeScanner<GCodeToken> {
    public:
-    GCodeDefaultScanner(std::istream &);
+    GCodeDefaultScanner(std::istream &, const std::string &tag = "");
     std::optional<GCodeToken> next() override;
     bool finished() override;
    private:

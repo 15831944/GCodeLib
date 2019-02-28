@@ -47,8 +47,8 @@ namespace GCodeLib::Parser::LinuxCNC {
     return std::regex_search(string, match, regex) && !match.empty();
   }
 
-  GCodeDefaultScanner::GCodeDefaultScanner(std::istream &is)
-    : input(is), buffer(""), source_position("", 0, 0, 0) {}
+  GCodeDefaultScanner::GCodeDefaultScanner(std::istream &is, const std::string &tag)
+    : input(is), buffer(""), source_position(tag, 0, 0, 0) {}
 
   std::optional<GCodeToken> GCodeDefaultScanner::next() {
     if (this->finished()) {

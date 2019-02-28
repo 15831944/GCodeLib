@@ -44,6 +44,10 @@ namespace GCodeLib::Parser {
     return this->type == type;
   }
 
+  const SourcePosition &GCodeNode::getPosition() const {
+    return this->position;
+  }
+
   std::ostream &operator<<(std::ostream &os, const GCodeNode &node) {
     node.dump(os);
     return os;

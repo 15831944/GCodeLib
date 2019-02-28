@@ -1,4 +1,5 @@
 #include "gcodelib/parser/Source.h"
+#include <iostream>
 
 namespace GCodeLib::Parser {
 
@@ -25,5 +26,13 @@ namespace GCodeLib::Parser {
     this->line = line;
     this->column = column;
     this->checksum = checksum;
+  }
+
+  std::ostream &operator<<(std::ostream &os, const SourcePosition &position) {
+    if (!position.getTag().empty()) {
+      os << position.getTag() << '@';
+    }
+    os << position.getLine() << ':' << position.getColumn();
+    return os;
   }
 }

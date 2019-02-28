@@ -8,6 +8,7 @@ gcodelib_source = [
   'parser/linuxcnc/Parser.cpp',
   'parser/linuxcnc/Scanner.cpp',
   'parser/linuxcnc/Token.cpp',
+  'parser/linuxcnc/Validator.cpp',
   'runtime/Error.cpp',
   'runtime/Interpreter.cpp',
   'runtime/IR.cpp',
