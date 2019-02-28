@@ -1,7 +1,36 @@
 #include "gcodelib/parser/linuxcnc/Token.h"
+#include <map>
 #include <iostream>
 
 namespace GCodeLib::Parser::LinuxCNC {
+
+  static const std::map<GCodeKeyword, std::string> KeywordMnemonics = {
+    { GCodeKeyword::Mod, "MOD" },
+    { GCodeKeyword::Eq, "EQ" },
+    { GCodeKeyword::Ne, "NE" },
+    { GCodeKeyword::Ge, "GE" },
+    { GCodeKeyword::Gt, "GT" },
+    { GCodeKeyword::Le, "LE" },
+    { GCodeKeyword::Lt, "LT" },
+    { GCodeKeyword::And, "AND" },
+    { GCodeKeyword::Or, "OR" },
+    { GCodeKeyword::Xor, "XOR" },
+    { GCodeKeyword::Sub, "sub" },
+    { GCodeKeyword::Endsub, "endsub" },
+    { GCodeKeyword::Return, "return" },
+    { GCodeKeyword::Call, "call" },
+    { GCodeKeyword::If, "if" },
+    { GCodeKeyword::Elseif, "elseif" },
+    { GCodeKeyword::Else, "else" },
+    { GCodeKeyword::Endif, "endif" },
+    { GCodeKeyword::While, "while" },
+    { GCodeKeyword::Endwhile, "endwhile" },
+    { GCodeKeyword::Do, "do" },
+    { GCodeKeyword::Repeat, "repeat" },
+    { GCodeKeyword::Endrepeat, "endrepeat" },
+    { GCodeKeyword::Break, "break" },
+    { GCodeKeyword::Continue, "continue" }
+  };
 
   GCodeToken::GCodeToken(const SourcePosition &position)
     : token_type(GCodeToken::Type::NewLine), token_position(position) {}
@@ -118,7 +147,7 @@ namespace GCodeLib::Parser::LinuxCNC {
         os << static_cast<char>(token.getOperator());
         break;
       case GCodeToken::Type::Keyword:
-        os << "Keyword:" << static_cast<int>(token.getKeyword());
+        os << KeywordMnemonics.at(token.getKeyword());
         break;
       case GCodeToken::Type::Comment:
         os << '(' << token.getComment() << ')';

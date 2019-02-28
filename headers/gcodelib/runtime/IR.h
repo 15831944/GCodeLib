@@ -12,21 +12,25 @@
 namespace GCodeLib::Runtime {
 
   enum class GCodeIROpcode {
-    Push,
+    // Syscall-related
     Prologue,
     SetArg,
     Syscall,
+    // Flow control
     Invoke,
     Jump,
     JumpIf,
     Call,
     Ret,
+    // Variables
     LoadNumbered,
     StoreNumbered,
     LoadNamed,
     StoreNamed,
-
+    // Stack manipulation
+    Push,
     Dup,
+    // Arithmetical-logical operations
     Negate,
     Add,
     Subtract,
@@ -42,6 +46,8 @@ namespace GCodeLib::Runtime {
     Not
   };
 
+  std::ostream &operator<<(std::ostream &, GCodeIROpcode);
+
   enum class GCodeSyscallType {
     General = 'G',
     Misc = 'O',
@@ -50,20 +56,21 @@ namespace GCodeLib::Runtime {
     ToolSelection = 'T'
   };
 
+  class GCodeIRModule; // Forward referencing
+
   class GCodeIRInstruction {
    public:
     GCodeIRInstruction(GCodeIROpcode, const GCodeRuntimeValue & = GCodeRuntimeValue::Empty);
 
     GCodeIROpcode getOpcode() const;
     const GCodeRuntimeValue &getValue() const;
-
     void setValue(const GCodeRuntimeValue &);
+
+    void dump(std::ostream &, const GCodeIRModule &) const;
    private:
     GCodeIROpcode opcode;
     GCodeRuntimeValue value;
   };
-
-  class GCodeIRModule; // Forward referencing
 
   class GCodeIRLabel {
    public:
@@ -90,8 +97,9 @@ namespace GCodeLib::Runtime {
     std::unique_ptr<GCodeIRLabel> newLabel();
     GCodeIRLabel &getNamedLabel(const std::string &);
     void registerProcedure(int64_t, const std::string &);
-    GCodeIRLabel &getProcedure(int64_t);
+    GCodeIRLabel &getProcedure(int64_t) const;
     void appendInstruction(GCodeIROpcode, const GCodeRuntimeValue & = GCodeRuntimeValue::Empty);
+    bool linked() const;
 
     friend std::ostream &operator<<(std::ostream &, const GCodeIRModule &);
     friend class GCodeIRLabel;

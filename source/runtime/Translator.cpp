@@ -31,7 +31,9 @@ namespace GCodeLib::Runtime {
   };
 
   GCodeIRTranslator::GCodeIRTranslator(Parser::GCodeNameMangler &mangler)
-    : impl(std::make_shared<Impl>(mangler)) {}
+    : impl(std::make_unique<Impl>(mangler)) {}
+
+  GCodeIRTranslator::~GCodeIRTranslator() = default;
 
   std::unique_ptr<GCodeIRModule> GCodeIRTranslator::translate(const Parser::GCodeBlock &ast) {
     return this->impl->translate(ast);

@@ -1,7 +1,6 @@
 #include "gcodelib/parser/linuxcnc/Parser.h"
 #include "gcodelib/parser/Error.h"
 #include <algorithm>
-#include <iostream>
 
 namespace GCodeLib::Parser::LinuxCNC  {
 
@@ -34,7 +33,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
     GCodeOperator::Z
   };
 
-  GCodeFilteredScanner::GCodeFilteredScanner(GCodeScanner &scanner)
+  GCodeFilteredScanner::GCodeFilteredScanner(GCodeScanner<GCodeToken> &scanner)
     : scanner(scanner) {}
 
   std::optional<GCodeToken> GCodeFilteredScanner::next() {
@@ -61,8 +60,10 @@ namespace GCodeLib::Parser::LinuxCNC  {
     return this->scanner.finished();
   }
 
-  GCodeParser::GCodeParser(GCodeScanner &scanner, GCodeNameMangler &mangler)
+  GCodeParser::GCodeParser(GCodeScanner<GCodeToken> &scanner, GCodeNameMangler &mangler)
     : GCodeParserBase(std::make_unique<GCodeFilteredScanner>(scanner), mangler) {}
+    
+  GCodeParser::~GCodeParser() = default;
 
   std::unique_ptr<GCodeBlock> GCodeParser::parse() {
     return this->nextBlock();

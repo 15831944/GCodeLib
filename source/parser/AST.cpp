@@ -1,7 +1,30 @@
 #include "gcodelib/parser/AST.h"
+#include <map>
 #include <iostream>
 
 namespace GCodeLib::Parser {
+
+  static const std::map<GCodeUnaryOperation::Operation, std::string> UnaryMnemonics = {
+    { GCodeUnaryOperation::Operation::Negate, "Negate" }
+  };
+
+  static const std::map<GCodeBinaryOperation::Operation, std::string> BinaryMnemonics = {
+    { GCodeBinaryOperation::Operation::Add, "Add" },
+    { GCodeBinaryOperation::Operation::Subtract, "Subtract" },
+    { GCodeBinaryOperation::Operation::Multiply, "Multiply" },
+    { GCodeBinaryOperation::Operation::Divide, "Divide" },
+    { GCodeBinaryOperation::Operation::Power, "Power" },
+    { GCodeBinaryOperation::Operation::Modulo, "Modulo" },
+    { GCodeBinaryOperation::Operation::Equals, "Equals" },
+    { GCodeBinaryOperation::Operation::NotEquals, "NotEquals" },
+    { GCodeBinaryOperation::Operation::Greater, "Greater" },
+    { GCodeBinaryOperation::Operation::GreaterOrEquals, "GreaterOrEquals" },
+    { GCodeBinaryOperation::Operation::Lesser, "Less" },
+    { GCodeBinaryOperation::Operation::LesserOrEquals, "LessOrEquals" },
+    { GCodeBinaryOperation::Operation::And, "And" },
+    { GCodeBinaryOperation::Operation::Or, "Or" },
+    { GCodeBinaryOperation::Operation::Xor, "Xor" }
+  };
 
   template <typename T>
   static void copy_arguments(const std::vector<std::unique_ptr<T>> &source, std::vector<std::reference_wrapper<const T>> &destination) {
@@ -65,11 +88,11 @@ namespace GCodeLib::Parser {
   }
 
   void GCodeNamedVariableAssignment::dump(std::ostream &os) const {
-    os << '#' << this->getIdentifier() << " = " << this->getValue();
+    os << "[store " << this->getIdentifier() << " = " << this->getValue() << ']';
   }
 
   void GCodeNumberedVariableAssignment::dump(std::ostream &os) const {
-    os << '#' << this->getIdentifier() << " = " << this->getValue();
+    os << "[store " << this->getIdentifier() << " = " << this->getValue() << ']';
   }
 
   GCodeUnaryOperation::GCodeUnaryOperation(Operation operation, std::unique_ptr<GCodeNode> argument, const SourcePosition &position)
@@ -84,7 +107,7 @@ namespace GCodeLib::Parser {
   }
 
   void GCodeUnaryOperation::dump(std::ostream &os) const {
-    os << '[' << static_cast<char>(this->operation) << this->getArgument() << ']';
+    os << '[' << UnaryMnemonics.at(this->getOperation()) << ' ' << this->getArgument() << ']';
   }
 
   GCodeBinaryOperation::GCodeBinaryOperation(Operation operation, std::unique_ptr<GCodeNode> left, std::unique_ptr<GCodeNode> right, const SourcePosition &position)
@@ -103,7 +126,7 @@ namespace GCodeLib::Parser {
   }
 
   void GCodeBinaryOperation::dump(std::ostream &os) const {
-    os << '[' << this->getLeftArgument() << static_cast<char>(this->operation) << this->getRightArgument() << ']';
+    os << '[' << BinaryMnemonics.at(this->operation) << ' ' << this->getLeftArgument() << "; " << this->getRightArgument() << ']';
   }
 
   GCodeFunctionCall::GCodeFunctionCall(const std::string &functionId, std::vector<std::unique_ptr<GCodeNode>> args, const SourcePosition &position)
@@ -155,10 +178,11 @@ namespace GCodeLib::Parser {
   }
   
   void GCodeCommand::dump(std::ostream &os) const {
-    os << this->getCommand();
+    os << '[' << this->getCommand();
     for (std::size_t i = 0; i < this->parameters.size(); i++) {
       os << ' ' << *this->parameters.at(i);
     }
+    os << ']';
   }
   
 
@@ -170,12 +194,14 @@ namespace GCodeLib::Parser {
   }
 
   void GCodeBlock::dump(std::ostream &os) const {
+    os << '[';
     for (std::size_t i = 0; i < this->content.size(); i++) {
       os << *this->content.at(i);
       if (i + 1 < this->content.size()) {
-        os << std::endl;
+        os << "; ";
       }
     }
+    os << ']';
   }
 
   GCodeNamedStatement::GCodeNamedStatement(const std::string &identifier, std::unique_ptr<GCodeNode> stmt, const SourcePosition &position)
@@ -209,7 +235,7 @@ namespace GCodeLib::Parser {
   }
 
   void GCodeProcedureDefinition::dump(std::ostream &os) const {
-    os << this->identifier << '{' << *this->body << "}[";
+    os << "[procedure " << this->identifier << ' ' << *this->body << " returns [";
     for (auto &ret : this->retValues) {
       os << *ret << ';';
     }
@@ -226,7 +252,7 @@ namespace GCodeLib::Parser {
   void GCodeProcedureReturn::dump(std::ostream &os) const {
     os << "[return";
     std::for_each(this->returnValues.begin(), this->returnValues.end(), [&](auto &value) {
-      os << ' ' << *value;
+      os << ' ' << *value << ';';
     });
     os << ']';
   }
@@ -243,7 +269,7 @@ namespace GCodeLib::Parser {
   }
 
   void GCodeProcedureCall::dump(std::ostream &os) const {
-    os << "Call:" << *this->procedureId;
+    os << "[call " << *this->procedureId << ']';
   }
 
   GCodeConditional::GCodeConditional(std::unique_ptr<GCodeNode> condition, std::unique_ptr<GCodeNode> thenBody, std::unique_ptr<GCodeNode> elseBody, const SourcePosition &position)

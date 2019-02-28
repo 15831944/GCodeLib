@@ -1,7 +1,46 @@
 #include "gcodelib/runtime/IR.h"
+#include "gcodelib/runtime/Error.h"
+#include <map>
+#include <bitset>
 #include <iostream>
+#include <iomanip>
 
 namespace GCodeLib::Runtime {
+
+  static const std::map<GCodeIROpcode, std::string> OpcodeMnemonics = {
+    { GCodeIROpcode::Prologue, "SyscallPrologue" },
+    { GCodeIROpcode::SetArg, "SyscalArgument" },
+    { GCodeIROpcode::Syscall, "Syscall" },
+    { GCodeIROpcode::Invoke, "Invoke" },
+    { GCodeIROpcode::Jump, "Jump" },
+    { GCodeIROpcode::JumpIf, "JumpIf" },
+    { GCodeIROpcode::Call, "Invoke" },
+    { GCodeIROpcode::Ret, "Return" },
+    { GCodeIROpcode::LoadNumbered, "LoadNumbered" },
+    { GCodeIROpcode::StoreNumbered, "StoreNumbered" },
+    { GCodeIROpcode::LoadNamed, "LoadNamed" },
+    { GCodeIROpcode::StoreNamed, "StoreNamed" },
+    { GCodeIROpcode::Push, "Push" },
+    { GCodeIROpcode::Dup, "Duplicate" },
+    { GCodeIROpcode::Negate, "Negate" },
+    { GCodeIROpcode::Add, "Add" },
+    { GCodeIROpcode::Subtract, "Subtract" },
+    { GCodeIROpcode::Multiply, "Multiply" },
+    { GCodeIROpcode::Divide, "Divide" },
+    { GCodeIROpcode::Power, "Power" },
+    { GCodeIROpcode::Modulo, "Modulo" },
+    { GCodeIROpcode::Compare, "Compare" },
+    { GCodeIROpcode::Test, "Test" },
+    { GCodeIROpcode::And, "And" },
+    { GCodeIROpcode::Or, "Or" },
+    { GCodeIROpcode::Xor, "Xor" },
+    { GCodeIROpcode::Not, "Not" }
+  };
+
+  std::ostream &operator<<(std::ostream &os, GCodeIROpcode opcode) {
+    os << OpcodeMnemonics.at(opcode);
+    return os;
+  }
 
   GCodeIRInstruction::GCodeIRInstruction(GCodeIROpcode opcode, const GCodeRuntimeValue &value)
     : opcode(opcode), value(value) {}
@@ -18,6 +57,44 @@ namespace GCodeLib::Runtime {
     this->value = value;
   }
 
+  void GCodeIRInstruction::dump(std::ostream &os, const GCodeIRModule &module) const {
+    os << std::left << std::setw(20);
+    switch (this->getOpcode()) {
+      case GCodeIROpcode::SetArg: {
+        unsigned char key = static_cast<unsigned char>(this->getValue().asInteger());
+        os << this->getOpcode() << key;
+      } break;
+      case GCodeIROpcode::Syscall: {
+        GCodeSyscallType type = static_cast<GCodeSyscallType>(this->getValue().asInteger());
+        os << this->getOpcode() << static_cast<char>(type);
+      } break;
+      case GCodeIROpcode::Invoke: {
+        const std::string &functionId = module.getSymbol(this->getValue().getInteger());
+        os << this->getOpcode() << functionId;
+      } break;
+      case GCodeIROpcode::LoadNamed: {
+        const std::string &symbol = module.getSymbol(static_cast<std::size_t>(this->getValue().getInteger()));
+        os << this->getOpcode() << symbol;
+      } break;
+      case GCodeIROpcode::StoreNamed: {
+        const std::string &symbol = module.getSymbol(static_cast<std::size_t>(this->getValue().getInteger()));
+        os << this->getOpcode() << symbol;
+      } break;
+      case GCodeIROpcode::Test: {
+        int64_t mask = this->getValue().asInteger();
+        std::bitset<8> bs(static_cast<int8_t>(mask));
+        os << this->getOpcode() << bs;
+      } break;
+      default:
+        if (this->getValue().is(GCodeRuntimeValue::Type::None)) {
+          os << this->getOpcode();
+        } else {
+          os << this->getOpcode() << this->getValue();
+        }
+        break;
+    }
+  }
+
   GCodeIRLabel::GCodeIRLabel(GCodeIRModule &module)
     : module(module) {}
 
@@ -28,6 +105,8 @@ namespace GCodeLib::Runtime {
         this->module.code[addr].setValue(static_cast<int64_t>(this->address.value()));
       }
       this->patched.clear();
+    } else {
+      throw GCodeRuntimeError("Address already bound to the label");
     }
   }
   
@@ -66,7 +145,11 @@ namespace GCodeLib::Runtime {
   }
   
   std::size_t GCodeIRLabel::getAddress() const {
-    return this->address.value();
+    if (this->address.has_value()) {
+      return this->address.value();
+    } else {
+      throw GCodeRuntimeError("Address is not bound to the label");
+    }
   }
 
   std::size_t GCodeIRModule::length() const {
@@ -74,7 +157,11 @@ namespace GCodeLib::Runtime {
   }
 
   const GCodeIRInstruction &GCodeIRModule::at(std::size_t index) const {
-    return this->code.at(index);
+    if (index < this->code.size()) {
+      return this->code.at(index);
+    } else {
+      throw GCodeRuntimeError("Instruction at offset " + std::to_string(index) + " not found");
+    }
   }
 
   std::size_t GCodeIRModule::getSymbolId(const std::string &symbol) {
@@ -108,8 +195,21 @@ namespace GCodeLib::Runtime {
     this->procedures[procId] = this->labels[label];
   }
 
-  GCodeIRLabel &GCodeIRModule::getProcedure(int64_t procId) {
-    return *this->procedures[procId];
+  GCodeIRLabel &GCodeIRModule::getProcedure(int64_t procId) const {
+    if (this->procedures.count(procId)) {
+      return *this->procedures.at(procId);
+    } else {
+      throw GCodeRuntimeError("Procedure " + std::to_string(procId) + " not found");
+    }
+  }
+
+  bool GCodeIRModule::linked() const {
+    for (auto &kv : this->labels) {
+      if (!kv.second->bound()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void GCodeIRModule::appendInstruction(GCodeIROpcode opcode, const GCodeRuntimeValue &value) {
@@ -121,8 +221,26 @@ namespace GCodeLib::Runtime {
   }
 
   std::ostream &operator<<(std::ostream &os, const GCodeIRModule &module) {
+    if (!module.symbols.empty()) {
+      os << "Symbols:" << std::endl;
+      for (auto kv : module.symbols) {
+        os << std::left << std::setw(10) << std::setfill(' ') << kv.first << kv.second << std::endl;
+      }
+      os << std::endl;
+    }
+    if (!module.procedures.empty()) {
+      os << "Procedures:" << std::endl;
+      for (auto kv : module.procedures) {
+        os << std::left << std::setw(10) << std::setfill(' ') << kv.first << kv.second->getAddress() << std::endl;
+      }
+      os << std::endl;
+    }
+    os << "Code:" << std::endl;
+    std::size_t offset = 0;
     for (auto &instr : module.code) {
-      os << &instr << '\t' << static_cast<int64_t>(instr.getOpcode()) << '\t' << instr.getValue() << std::endl;
+      os << std::left << std::setw(10) << std::setfill(' ') << (std::to_string(offset++) + ":");
+      instr.dump(os, module);
+      os << std::endl;
     }
     return os;
   }

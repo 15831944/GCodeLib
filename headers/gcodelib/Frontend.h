@@ -12,10 +12,20 @@ namespace GCodeLib {
   template <class Scanner, class Parser, class Mangler>
   class GCodeFrontend {
    public:
+    using ScannerType = Scanner;
+    using ParserType = Parser;
+    using ManglerType = Mangler;
+  
     GCodeFrontend()
       : translator(this->mangler) {}
 
-    std::unique_ptr<Runtime::GCodeIRModule> compile(std::istream &is) {
+    auto parse(std::istream &is) {
+      Scanner scanner(is);
+      Parser parser(scanner, this->mangler);
+      return parser.parse();
+    }
+
+    auto compile(std::istream &is) {
       Scanner scanner(is);
       Parser parser(scanner, this->mangler);
       auto ast = parser.parse();

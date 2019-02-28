@@ -10,10 +10,11 @@ namespace GCodeLib::Runtime {
   class GCodeIRTranslator  {
    public:
     GCodeIRTranslator(Parser::GCodeNameMangler &);
+    ~GCodeIRTranslator();
     std::unique_ptr<GCodeIRModule> translate(const Parser::GCodeBlock &);
    private:
     class Impl;
-    std::shared_ptr<Impl> impl;
+    std::unique_ptr<Impl> impl;
   };
 }
 

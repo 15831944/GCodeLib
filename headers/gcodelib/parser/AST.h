@@ -142,7 +142,7 @@ namespace GCodeLib::Parser {
   class GCodeUnaryOperation : public GCodeVisitableNode<GCodeUnaryOperation> {
    public:
     enum class Operation {
-      Negate = '-'
+      Negate
     };
 
     GCodeUnaryOperation(Operation, std::unique_ptr<GCodeNode>, const SourcePosition &);
@@ -159,21 +159,21 @@ namespace GCodeLib::Parser {
   class GCodeBinaryOperation : public GCodeVisitableNode<GCodeBinaryOperation> {
    public:
     enum class Operation {
-      Add = '+',
-      Subtract = '-',
-      Multiply = '*',
-      Divide = '/',
-      Power = '^',
-      Modulo = '%',
-      Equals = 'E',
-      NotEquals = 'N',
-      Greater = 'G',
-      GreaterOrEquals = 'g',
-      Lesser = 'L',
-      LesserOrEquals = 'l',
-      And = '&',
-      Or = '|',
-      Xor = 'X'
+      Add,
+      Subtract,
+      Multiply,
+      Divide,
+      Power,
+      Modulo,
+      Equals,
+      NotEquals,
+      Greater,
+      GreaterOrEquals,
+      Lesser,
+      LesserOrEquals,
+      And,
+      Or,
+      Xor
     };
 
     GCodeBinaryOperation(Operation, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, const SourcePosition &);

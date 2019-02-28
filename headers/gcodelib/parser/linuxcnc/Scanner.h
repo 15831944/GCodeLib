@@ -2,6 +2,7 @@
 #define GCODELIB_PARSER_LINUXCNC_SCANNER_H_
 
 #include "gcodelib/Base.h"
+#include "gcodelib/parser/Scanner.h"
 #include "gcodelib/parser/linuxcnc/Token.h"
 #include <iosfwd>
 #include <string>
@@ -9,14 +10,7 @@
 
 namespace GCodeLib::Parser::LinuxCNC {
 
-  class GCodeScanner {
-   public:
-    virtual ~GCodeScanner() = default;
-    virtual std::optional<GCodeToken> next() = 0;
-    virtual bool finished() = 0;
-  };
-
-  class GCodeDefaultScanner : public GCodeScanner {
+  class GCodeDefaultScanner : public GCodeScanner<GCodeToken> {
    public:
     GCodeDefaultScanner(std::istream &);
     std::optional<GCodeToken> next() override;

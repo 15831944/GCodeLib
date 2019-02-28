@@ -20,21 +20,22 @@ namespace GCodeLib::Parser::LinuxCNC {
     std::string getLoop(const std::string &) const override;
   };
 
-  class GCodeFilteredScanner : public GCodeScanner {
+  class GCodeFilteredScanner : public GCodeScanner<GCodeToken> {
    public:
-    GCodeFilteredScanner(GCodeScanner &);
+    GCodeFilteredScanner(GCodeScanner<GCodeToken> &);
 
     std::optional<GCodeToken> next() override;
     bool finished() override;
    private:
-    GCodeScanner &scanner;
+    GCodeScanner<GCodeToken> &scanner;
   };
 
   class GCodeParser;
 
-  class GCodeParser : public GCodeParserBase<GCodeParser, std::shared_ptr<GCodeFilteredScanner>, GCodeToken, 3> {
+  class GCodeParser : public GCodeParserBase<GCodeParser, std::unique_ptr<GCodeFilteredScanner>, GCodeToken, 3> {
    public:
-    GCodeParser(GCodeScanner &, GCodeNameMangler &);
+    GCodeParser(GCodeScanner<GCodeToken> &, GCodeNameMangler &);
+    ~GCodeParser();
     std::unique_ptr<GCodeBlock> parse();
    private:
     bool expectToken(GCodeToken::Type, std::size_t = 0);
