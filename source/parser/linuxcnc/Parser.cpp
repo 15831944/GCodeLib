@@ -17,6 +17,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
     GCodeOperator::B,
     GCodeOperator::C,
     GCodeOperator::D,
+    GCodeOperator::E,
     GCodeOperator::H,
     GCodeOperator::I,
     GCodeOperator::J,
@@ -117,6 +118,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
       this->checkProcedureCall() ||
       this->checkAssignment() ||
       this->checkNumberedStatement() ||
+      this->checkChecksum() ||
       this->expectToken(GCodeToken::Type::NewLine);
   }
 
@@ -136,9 +138,30 @@ namespace GCodeLib::Parser::LinuxCNC  {
       return this->nextAssignment();
     } else if (this->checkNumberedStatement()) {
       return this->nextNumberedStatement();
+    } else if (this->checkChecksum()) {
+      return this->nextChecksum();
     } else {
       return this->nextCommand();
     }
+  }
+
+  bool GCodeParser::checkChecksum() {
+    return this->expectOperator(GCodeOperator::Star) &&
+      this->expectToken(GCodeToken::Type::IntegerContant, 1) &&
+      this->expectToken(GCodeToken::Type::NewLine, 2);
+  }
+
+  std::unique_ptr<GCodeNode> GCodeParser::nextChecksum() {
+    auto position = this->position();
+    this->assert(&GCodeParser::checkChecksum, "Expected checksum");
+    int64_t checksum = this->tokenAt(1).getInteger();
+    int64_t real_checksum = position.value().getChecksum();
+    if (checksum != real_checksum) {
+      this->error("Wrong checksum; expected " + std::to_string(checksum) + ", got " + std::to_string(real_checksum));
+    }
+    this->shift();
+    this->shift();
+    return std::make_unique<GCodeNoOperation>(position.value());
   }
 
   bool GCodeParser::checkNumberedStatement() {

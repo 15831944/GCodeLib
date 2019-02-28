@@ -37,6 +37,8 @@ namespace GCodeLib::Parser::LinuxCNC {
     GCodeParser(GCodeScanner<GCodeToken> &, GCodeNameMangler &);
     ~GCodeParser();
     std::unique_ptr<GCodeBlock> parse();
+
+    friend class GCodeParserBase<GCodeParser, std::unique_ptr<GCodeFilteredScanner>, GCodeToken, 3>;
    private:
     bool expectToken(GCodeToken::Type, std::size_t = 0);
     bool expectOperator(GCodeOperator, std::size_t = 0);
@@ -48,6 +50,8 @@ namespace GCodeLib::Parser::LinuxCNC {
     std::unique_ptr<GCodeBlock> nextBlock();
     bool checkStatement();
     std::unique_ptr<GCodeNode> nextStatement();
+    bool checkChecksum();
+    std::unique_ptr<GCodeNode> nextChecksum();
     bool checkAssignment();
     std::unique_ptr<GCodeNode> nextAssignment();
     bool checkFlowCommand();

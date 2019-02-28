@@ -13,6 +13,7 @@ namespace GCodeLib::Parser {
   class GCodeNode {
    public:
     enum class Type {
+      NoOperaation,
       IntegerContant,
       FloatContant,
       NumberedVariable,
@@ -57,6 +58,14 @@ namespace GCodeLib::Parser {
    public:
     using GCodeNode::GCodeNode;
     void visit(Visitor &) const override;
+  };
+
+  class GCodeNoOperation;
+  class GCodeNoOperation : public GCodeVisitableNode<GCodeNoOperation> {
+   public:
+    GCodeNoOperation(const SourcePosition &);
+   protected:
+    void dump(std::ostream &) const override;
   };
 
   class GCodeConstantValue;
@@ -367,6 +376,7 @@ namespace GCodeLib::Parser {
   class GCodeNode::Visitor {
    public:
     virtual ~Visitor() = default;
+    virtual void visit(const GCodeNoOperation &) {}
     virtual void visit(const GCodeConstantValue &) {}
     virtual void visit(const GCodeNamedVariable &) {}
     virtual void visit(const GCodeNumberedVariable &) {}

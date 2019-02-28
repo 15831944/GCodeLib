@@ -13,8 +13,8 @@ namespace GCodeLib::Parser::LinuxCNC {
 // Commands
     G = 'G',
     M = 'M',
-    O = 'O',
     N = 'N',
+    O = 'O',
     F = 'F',
     S = 'S',
     T = 'T',
@@ -23,6 +23,7 @@ namespace GCodeLib::Parser::LinuxCNC {
     B = 'B',
     C = 'C',
     D = 'D',
+    E = 'E',
     H = 'H',
     I = 'I',
     J = 'J',

@@ -39,7 +39,7 @@ namespace GCodeLib::Parser::LinuxCNC {
   static std::regex Integer(R"(^[0-9]+)");
   static std::regex Float(R"(^[0-9]+\.[0-9]+)");
   static std::regex Literal(R"(^[a-zA-Z_]{2,}[\w_]*)");
-  static std::regex Operator(R"(^[A-DF-Z\+\-*/%\[\]#\=<>])", std::regex_constants::ECMAScript | std::regex_constants::icase);
+  static std::regex Operator(R"(^[A-Z\+\-*/%\[\]#\=<>])", std::regex_constants::ECMAScript | std::regex_constants::icase);
   static std::regex Comment(R"(^;.*$)");
   static std::regex BracedComment(R"(^\([^\)]*\))");
 

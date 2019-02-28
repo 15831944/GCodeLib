@@ -53,6 +53,13 @@ namespace GCodeLib::Parser {
     return os;
   }
 
+  GCodeNoOperation::GCodeNoOperation(const SourcePosition &position)
+    : GCodeVisitableNode(Type::NoOperaation, position) {}
+
+  void GCodeNoOperation::dump(std::ostream &os) const {
+    os << "NoOperation";
+  }
+
   GCodeConstantValue::GCodeConstantValue(int64_t value, const SourcePosition &position)
     : GCodeVisitableNode(Type::IntegerContant, position), value(value) {}
   
