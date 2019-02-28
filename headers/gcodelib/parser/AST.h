@@ -16,6 +16,7 @@ namespace GCodeLib::Parser {
       NoOperaation,
       IntegerContant,
       FloatContant,
+      StringConstant,
       NumberedVariable,
       NamedVariable,
       UnaryOperation,
@@ -73,13 +74,15 @@ namespace GCodeLib::Parser {
    public:
     GCodeConstantValue(int64_t, const SourcePosition &);
     GCodeConstantValue(double, const SourcePosition &);
+    GCodeConstantValue(const std::string &, const SourcePosition &);
 
     int64_t asInteger(int64_t = 0) const;
     double asFloat(double = 0.0) const;
+    const std::string &asString(const std::string & = "") const;
    protected:
     void dump(std::ostream &) const override;
    private:
-    std::variant<int64_t, double> value;
+    std::variant<int64_t, double, std::string> value;
   };
 
   template <class Self, GCodeNode::Type NodeType, typename ValueType>

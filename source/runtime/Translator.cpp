@@ -237,6 +237,8 @@ namespace GCodeLib::Runtime {
       this->module->appendInstruction(GCodeIROpcode::Push, GCodeRuntimeValue(value.asInteger()));
     } else if (value.is(Parser::GCodeNode::Type::FloatContant)) {
       this->module->appendInstruction(GCodeIROpcode::Push, GCodeRuntimeValue(value.asFloat()));
+    } else if (value.is(Parser::GCodeNode::Type::StringConstant)) {
+      this->module->appendInstruction(GCodeIROpcode::Push, GCodeRuntimeValue(value.asString()));
     }
   }
 

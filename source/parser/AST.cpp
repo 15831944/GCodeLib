@@ -66,6 +66,9 @@ namespace GCodeLib::Parser {
   GCodeConstantValue::GCodeConstantValue(double value, const SourcePosition &position)
     : GCodeVisitableNode(Type::FloatContant, position), value(value) {}
 
+  GCodeConstantValue::GCodeConstantValue(const std::string &value, const SourcePosition &position)
+    : GCodeVisitableNode(Type::StringConstant, position), value(value) {}
+
   int64_t GCodeConstantValue::asInteger(int64_t defaultValue) const {
     if (this->is(Type::IntegerContant)) {
       return std::get<int64_t>(this->value);
@@ -77,6 +80,14 @@ namespace GCodeLib::Parser {
   double GCodeConstantValue::asFloat(double defaultValue) const {
     if (this->is(Type::FloatContant)) {
       return std::get<double>(this->value);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  const std::string &GCodeConstantValue::asString(const std::string &defaultValue) const {
+    if (this->is(Type::StringConstant)) {
+      return std::get<std::string>(this->value);
     } else {
       return defaultValue;
     }
