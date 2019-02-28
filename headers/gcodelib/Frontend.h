@@ -14,8 +14,15 @@ namespace GCodeLib {
     struct EmptyValidator {};
   }
 
+  class GCodeCompilerFrontend {
+   public:
+    virtual ~GCodeCompilerFrontend() = default;
+    virtual std::unique_ptr<Parser::GCodeBlock> parse(std::istream &, const std::string & = "") = 0;
+    virtual std::unique_ptr<Runtime::GCodeIRModule> compile(std::istream &, const std::string & = "") = 0;
+  };
+
   template <class Scanner, class Parser, class Mangler, class Validator = Internal::EmptyValidator>
-  class GCodeFrontend {
+  class GCodeFrontend : public GCodeCompilerFrontend {
    public:
     using ScannerType = Scanner;
     using ParserType = Parser;
@@ -25,17 +32,17 @@ namespace GCodeLib {
     GCodeFrontend()
       : translator(this->mangler) {}
 
-    auto parse(std::istream &is, const std::string &tag = "") {
+    std::unique_ptr<GCodeLib::Parser::GCodeBlock> parse(std::istream &is, const std::string &tag) override {
       Scanner scanner(is, tag);
       Parser parser(scanner, this->mangler);
       auto ast = parser.parse();
       if constexpr (!std::is_same<Validator, Internal::EmptyValidator>()) {
         this->validator.validate(*ast);
       }
-      return *ast;
+      return ast;
     }
 
-    auto compile(std::istream &is, const std::string &tag = "") {
+    std::unique_ptr<Runtime::GCodeIRModule> compile(std::istream &is, const std::string &tag) override {
       Scanner scanner(is, tag);
       Parser parser(scanner, this->mangler);
       auto ast = parser.parse();
