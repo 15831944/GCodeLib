@@ -1,5 +1,5 @@
-#ifndef GCODELIB_PARSER_LINUXCNC_TOKEN_H_
-#define GCODELIB_PARSER_LINUXCNC_TOKEN_H_
+#ifndef GCODELIB_PARSER_REPRAP_TOKEN_H_
+#define GCODELIB_PARSER_REPRAP_TOKEN_H_
 
 #include "gcodelib/Base.h"
 #include "gcodelib/parser/Source.h"
@@ -7,16 +7,14 @@
 #include <variant>
 #include <iosfwd>
 
-namespace GCodeLib::Parser::LinuxCNC {
+namespace GCodeLib::Parser::RepRap {
 
   enum class GCodeOperator {
 // Commands
     G = 'G',
     M = 'M',
     N = 'N',
-    O = 'O',
     F = 'F',
-    S = 'S',
     T = 'T',
 // Parameters
     A = 'A',
@@ -29,9 +27,11 @@ namespace GCodeLib::Parser::LinuxCNC {
     J = 'J',
     K = 'K',
     L = 'L',
+    O = 'O',
     P = 'P',
     Q = 'Q',
     R = 'R',
+    S = 'S',
     U = 'U',
     V = 'V',
     W = 'W',
@@ -39,47 +39,9 @@ namespace GCodeLib::Parser::LinuxCNC {
     Y = 'Y',
     Z = 'Z',
 // Operations
-    Plus = '+',
-    Minus = '-',
     Star = '*',
-    Slash = '/',
     Percent = '%',
-    Hash = '#',
-    Equal = '=',
-    OpeningBracket = '[',
-    ClosingBracket = ']',
-    GreaterThan = '>',
-    LessThan = '<',
     None = '\0'
-  };
-
-  enum class GCodeKeyword {
-    Mod,
-    Eq,
-    Ne,
-    Gt,
-    Ge,
-    Lt,
-    Le,
-    And,
-    Or,
-    Xor,
-    None,
-    Sub,
-    Endsub,
-    Return,
-    Call,
-    If,
-    Elseif,
-    Else,
-    Endif,
-    While,
-    Endwhile,
-    Do,
-    Repeat,
-    Endrepeat,
-    Break,
-    Continue
   };
 
   class GCodeToken {
@@ -87,9 +49,8 @@ namespace GCodeLib::Parser::LinuxCNC {
     enum class Type {
       IntegerContant,
       FloatConstant,
+      StringConstant,
       Operator,
-      Keyword,
-      Literal,
       Comment,
       NewLine
     };
@@ -99,7 +60,6 @@ namespace GCodeLib::Parser::LinuxCNC {
     GCodeToken(double, const SourcePosition &);
     GCodeToken(const std::string &, bool, const SourcePosition &);
     GCodeToken(GCodeOperator, const SourcePosition &);
-    GCodeToken(GCodeKeyword, const SourcePosition &);
     GCodeToken(const GCodeToken &);
     GCodeToken(GCodeToken &&);
     GCodeToken &operator=(const GCodeToken &);
@@ -111,16 +71,15 @@ namespace GCodeLib::Parser::LinuxCNC {
 
     int64_t getInteger() const;
     double getFloat() const;
-    const std::string &getLiteral() const;
+    const std::string &getString() const;
     const std::string &getComment() const;
     GCodeOperator getOperator() const;
-    GCodeKeyword getKeyword() const;
 
     friend std::ostream &operator<<(std::ostream &, const GCodeToken &);
 
    private:
     Type token_type;
-    std::variant<int64_t, double, std::string, GCodeOperator, GCodeKeyword> value;
+    std::variant<int64_t, double, std::string, GCodeOperator> value;
     SourcePosition token_position;
   };
 }

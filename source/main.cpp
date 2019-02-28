@@ -37,7 +37,7 @@ class TestInterpreter : public GCodeInterpreter {
 int main(int argc, const char **argv) {
   try {
     std::ifstream is(argv[1]);
-    GCodeLinuxCNC compiler;
+    GCodeRepRap compiler;
     auto ir = compiler.compile(is, std::string(argv[1]));
     is.close();
     TestInterpreter interp(*ir);

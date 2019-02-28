@@ -3,9 +3,8 @@
 
 #include "gcodelib/Base.h"
 #include "gcodelib/runtime/Translator.h"
-#include "gcodelib/parser/linuxcnc/Scanner.h"
-#include "gcodelib/parser/linuxcnc/Parser.h"
-#include "gcodelib/parser/linuxcnc/Validator.h"
+#include "gcodelib/parser/linuxcnc/LinuxCNC.h"
+#include "gcodelib/parser/reprap/RepRap.h"
 #include <type_traits>
 #include <iosfwd>
 
@@ -52,6 +51,7 @@ namespace GCodeLib {
   };
 
   using GCodeLinuxCNC = GCodeFrontend<Parser::LinuxCNC::GCodeDefaultScanner, Parser::LinuxCNC::GCodeParser, Parser::LinuxCNC::GCodeLCNCMangler, Parser::LinuxCNC::GCodeLCNCValidator>;
+  using GCodeRepRap = GCodeFrontend<Parser::RepRap::GCodeDefaultScanner, Parser::RepRap::GCodeParser, Parser::RepRap::GCodeRepRapMangler>;
 }
 
 #endif
