@@ -6,4 +6,4 @@ The main motivation of the project is the lack of proper G-Code engine implement
 
 #### Author & License
 Author: Jevgēnijs Protopopovs \
-License: at some point the code will be licensed under the terms of some permissive license.
+License: project code is licensed under the terms of MIT license.
