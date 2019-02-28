@@ -3,6 +3,7 @@
 
 #include "gcodelib/Base.h"
 #include "gcodelib/runtime/Value.h"
+#include "gcodelib/runtime/SourceMap.h"
 #include <vector>
 #include <map>
 #include <functional>
@@ -87,10 +88,15 @@ namespace GCodeLib::Runtime {
     std::vector<std::size_t> patched;
   };
 
+  class GCodeIRPosition;
+
   class GCodeIRModule {
    public:
     std::size_t length() const;
     const GCodeIRInstruction &at(std::size_t) const;
+
+    std::unique_ptr<GCodeIRPosition> newPositionRegister(const Parser::SourcePosition &);
+    IRSourceMap &getSourceMap();
 
     std::size_t getSymbolId(const std::string &);
     const std::string &getSymbol(std::size_t) const;
@@ -109,6 +115,19 @@ namespace GCodeLib::Runtime {
     std::map<std::string, std::size_t> symbolIdentifiers;
     std::map<std::string, std::shared_ptr<GCodeIRLabel>> labels;
     std::map<int64_t, std::shared_ptr<GCodeIRLabel>> procedures;
+    IRSourceMap sourceMap;
+  };
+
+  class GCodeIRPosition {
+   public:
+    GCodeIRPosition(GCodeIRModule &, const Parser::SourcePosition &);
+    ~GCodeIRPosition();
+    GCodeIRPosition(const GCodeIRPosition &) = delete;
+    GCodeIRPosition &operator=(const GCodeIRPosition &) = delete;
+   private:
+    GCodeIRModule &module;
+    const Parser::SourcePosition &position;
+    std::size_t start_address;
   };
 }
 

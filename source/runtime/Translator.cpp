@@ -49,6 +49,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeBlock &block) {
+    auto sourceMap = this->module->newPositionRegister(block.getPosition());
     std::vector<std::reference_wrapper<const Parser::GCodeNode>> content;
     block.getContent(content);
     for (auto node : content) {
@@ -57,6 +58,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeCommand &cmd) {
+    auto sourceMap = this->module->newPositionRegister(cmd.getPosition());
     this->module->appendInstruction(GCodeIROpcode::Prologue);
     GCodeSyscallType syscallType = static_cast<GCodeSyscallType>(cmd.getCommand().getField());
     std::vector<std::reference_wrapper<const Parser::GCodeWord>> paramList;
@@ -70,6 +72,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeUnaryOperation &node) {
+    auto sourceMap = this->module->newPositionRegister(node.getPosition());
     node.getArgument().visit(*this);
     switch (node.getOperation()) {
       case Parser::GCodeUnaryOperation::Operation::Negate:
@@ -79,6 +82,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeBinaryOperation &node) {
+    auto sourceMap = this->module->newPositionRegister(node.getPosition());
     node.getLeftArgument().visit(*this);
     node.getRightArgument().visit(*this);
     switch (node.getOperation()) {
@@ -137,6 +141,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeFunctionCall &call) {
+    auto sourceMap = this->module->newPositionRegister(call.getPosition());
     std::vector<std::reference_wrapper<const Parser::GCodeNode>> args;
     call.getArguments(args);
     std::reverse(args.begin(), args.end());
@@ -149,6 +154,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeProcedureDefinition &definition) {
+    auto sourceMap = this->module->newPositionRegister(definition.getPosition());
     auto label = this->module->newLabel();
     label->jump();
     std::string procedureName = this->mangler.getProcedureName(definition.getIdentifier());
@@ -166,6 +172,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeProcedureCall &call) {
+    auto sourceMap = this->module->newPositionRegister(call.getPosition());
     std::vector<std::reference_wrapper<const Parser::GCodeNode>> args;
     call.getArguments(args);
     for (auto arg : args) {
@@ -176,6 +183,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeConditional &conditional) {
+    auto sourceMap = this->module->newPositionRegister(conditional.getPosition());
     auto endifLabel = this->module->newLabel();
     conditional.getCondition().visit(*this);
     this->module->appendInstruction(GCodeIROpcode::Not);
@@ -194,6 +202,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeWhileLoop &loop) {
+    auto sourceMap = this->module->newPositionRegister(loop.getPosition());
     std::string loopName = this->mangler.getLoop(loop.getLabel());
     auto &continueLoop = this->module->getNamedLabel(this->mangler.getStatementStart(loopName));
     auto &breakLoop = this->module->getNamedLabel(this->mangler.getStatementEnd(loopName));
@@ -213,6 +222,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeRepeatLoop &loop) {
+    auto sourceMap = this->module->newPositionRegister(loop.getPosition());
     std::string loopName = this->mangler.getLoop(loop.getLabel());
     auto &continueLoop = this->module->getNamedLabel(this->mangler.getStatementStart(loopName));
     auto &breakLoop = this->module->getNamedLabel(this->mangler.getStatementEnd(loopName));
@@ -233,6 +243,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeConstantValue &value) {
+    auto sourceMap = this->module->newPositionRegister(value.getPosition());
     if (value.is(Parser::GCodeNode::Type::IntegerContant)) {
       this->module->appendInstruction(GCodeIROpcode::Push, GCodeRuntimeValue(value.asInteger()));
     } else if (value.is(Parser::GCodeNode::Type::FloatContant)) {
@@ -243,26 +254,31 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeNumberedVariable &variable) {
+    auto sourceMap = this->module->newPositionRegister(variable.getPosition());
     this->module->appendInstruction(GCodeIROpcode::LoadNumbered, variable.getIdentifier());
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeNamedVariable &variable) {
+    auto sourceMap = this->module->newPositionRegister(variable.getPosition());
     int64_t symbol = this->module->getSymbolId(variable.getIdentifier());
     this->module->appendInstruction(GCodeIROpcode::LoadNamed, symbol);
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeNumberedVariableAssignment &assignment) {
+    auto sourceMap = this->module->newPositionRegister(assignment.getPosition());
     assignment.getValue().visit(*this);
     this->module->appendInstruction(GCodeIROpcode::StoreNumbered, assignment.getIdentifier());
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeNamedVariableAssignment &assignment) {
+    auto sourceMap = this->module->newPositionRegister(assignment.getPosition());
     assignment.getValue().visit(*this);
     int64_t symbol = this->module->getSymbolId(assignment.getIdentifier());
     this->module->appendInstruction(GCodeIROpcode::StoreNamed, symbol);
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeProcedureReturn &ret) {
+    auto sourceMap = this->module->newPositionRegister(ret.getPosition());
     std::vector<std::reference_wrapper<const Parser::GCodeNode>> rets;
     ret.getReturnValues(rets);
     for (auto value : rets) {
@@ -272,6 +288,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeNamedStatement &stmt) {
+    auto sourceMap = this->module->newPositionRegister(stmt.getPosition());
     auto &start = this->module->getNamedLabel(this->mangler.getStatementStart(stmt.getIdentifier()));
     auto &end = this->module->getNamedLabel(this->mangler.getStatementEnd(stmt.getIdentifier()));
     start.bind();
@@ -280,6 +297,7 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRTranslator::Impl::visit(const Parser::GCodeLoopControl &ctrl) {
+    auto sourceMap = this->module->newPositionRegister(ctrl.getPosition());
     std::string label = this->mangler.getLoop(ctrl.getLoopIdentifier());
     switch (ctrl.getControlType()) {
       case Parser::GCodeLoopControl::ControlType::Break:

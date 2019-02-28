@@ -1,7 +1,7 @@
 gcodelib_source = [
   'main.cpp',
+  'Error.cpp',
   'parser/AST.cpp',
-  'parser/Error.cpp',
   'parser/Mangling.cpp',
   'parser/Source.cpp',
   'parser/linuxcnc/Mangling.cpp',
@@ -13,10 +13,10 @@ gcodelib_source = [
   'parser/reprap/Parser.cpp',
   'parser/reprap/Scanner.cpp',
   'parser/reprap/Token.cpp',
-  'runtime/Error.cpp',
   'runtime/Interpreter.cpp',
   'runtime/IR.cpp',
   'runtime/Runtime.cpp',
+  'runtime/SourceMap.cpp',
   'runtime/Storage.cpp',
   'runtime/Translator.cpp',
   'runtime/Value.cpp'

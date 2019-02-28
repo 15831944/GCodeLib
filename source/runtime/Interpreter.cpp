@@ -1,6 +1,7 @@
 #include "gcodelib/runtime/Interpreter.h"
 #include "gcodelib/runtime/Error.h"
 #include <cmath>
+#include <iostream>
 
 namespace GCodeLib::Runtime {
 
@@ -46,119 +47,130 @@ namespace GCodeLib::Runtime {
     GCodeRuntimeState &frame = this->getState();
     GCodeScopedDictionary<unsigned char> args;
     while (this->state.has_value() && frame.getPC() < this->module.length()) {
+      std::size_t current_address = frame.getPC();
       const GCodeIRInstruction &instr = this->module.at(frame.nextPC());
-      switch (instr.getOpcode()) {
-        case GCodeIROpcode::Push:
-          frame.push(instr.getValue());
-          break;
-        case GCodeIROpcode::Prologue:
-          args.clear();
-          break;
-        case GCodeIROpcode::SetArg: {
-          unsigned char key = static_cast<unsigned char>(instr.getValue().assertNumeric().asInteger());
-          args.put(key, frame.pop());
-        } break;
-        case GCodeIROpcode::Syscall: {
-          GCodeSyscallType type = static_cast<GCodeSyscallType>(instr.getValue().assertNumeric().asInteger());
-          GCodeRuntimeValue function = frame.pop();
-          this->syscall(type, function, args);
-        } break;
-        case GCodeIROpcode::Jump: {
-          std::size_t pc = static_cast<std::size_t>(instr.getValue().assertNumeric().asInteger());
-          frame.jump(pc);
-        } break;
-        case GCodeIROpcode::JumpIf: {
-          std::size_t pc = static_cast<std::size_t>(instr.getValue().assertNumeric().asInteger());
-          bool cond = frame.pop().assertNumeric().asInteger() != 0;
-          if (cond) {
+      try {
+        switch (instr.getOpcode()) {
+          case GCodeIROpcode::Push:
+            frame.push(instr.getValue());
+            break;
+          case GCodeIROpcode::Prologue:
+            args.clear();
+            break;
+          case GCodeIROpcode::SetArg: {
+            unsigned char key = static_cast<unsigned char>(instr.getValue().assertNumeric().asInteger());
+            args.put(key, frame.pop());
+          } break;
+          case GCodeIROpcode::Syscall: {
+            GCodeSyscallType type = static_cast<GCodeSyscallType>(instr.getValue().assertNumeric().asInteger());
+            GCodeRuntimeValue function = frame.pop();
+            this->syscall(type, function, args);
+          } break;
+          case GCodeIROpcode::Jump: {
+            std::size_t pc = static_cast<std::size_t>(instr.getValue().assertNumeric().asInteger());
             frame.jump(pc);
+          } break;
+          case GCodeIROpcode::JumpIf: {
+            std::size_t pc = static_cast<std::size_t>(instr.getValue().assertNumeric().asInteger());
+            bool cond = frame.pop().assertNumeric().asInteger() != 0;
+            if (cond) {
+              frame.jump(pc);
+            }
+          } break;
+          case GCodeIROpcode::Call: {
+            int64_t pid = frame.pop().assertNumeric().asInteger();
+            frame.call(this->module.getProcedure(pid).getAddress());
+            std::size_t argc = static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger());
+            while (argc-- > 0) {
+              frame.getScope().getNumbered().put(argc, frame.pop());
+            }
+          } break;
+          case GCodeIROpcode::Ret: {
+            frame.ret();
+            std::size_t argc = static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger());
+            while (argc-- > 0) {
+              frame.getScope().getNumbered().put(argc, frame.pop());
+            }
+          } break;
+          case GCodeIROpcode::Dup:
+            frame.dup();
+            break;
+          case GCodeIROpcode::Negate:
+            frame.negate();
+            break;
+          case GCodeIROpcode::Add:
+            frame.add();
+            break;
+          case GCodeIROpcode::Subtract:
+            frame.subtract();
+            break;
+          case GCodeIROpcode::Multiply:
+            frame.multiply();
+            break;
+          case GCodeIROpcode::Divide:
+            frame.divide();
+            break;
+          case GCodeIROpcode::Power:
+            frame.power();
+            break;
+          case GCodeIROpcode::Modulo:
+            frame.modulo();
+            break;
+          case GCodeIROpcode::Compare:
+            frame.compare();
+            break;
+          case GCodeIROpcode::Test: {
+            int64_t mask = instr.getValue().assertNumeric().asInteger();
+            frame.test(mask);
+          } break;
+          case GCodeIROpcode::And:
+            frame.iand();
+            break;
+          case GCodeIROpcode::Or:
+            frame.ior();
+            break;
+          case GCodeIROpcode::Xor:
+            frame.ixor();
+            break;
+          case GCodeIROpcode::Not:
+            frame.inot();
+            break;
+          case GCodeIROpcode::Invoke: {
+            const std::string &functionId = this->module.getSymbol(instr.getValue().assertNumeric().getInteger());
+            std::size_t argc = frame.pop().assertNumeric().asInteger();
+            std::vector<GCodeRuntimeValue> args;
+            while (argc--) {
+              args.push_back(frame.pop());
+            }
+            frame.push(this->functions.invoke(functionId, args));
+          } break;
+          case GCodeIROpcode::LoadNumbered: {
+            const GCodeRuntimeValue &value = frame.getScope().getNumbered().get(instr.getValue().assertNumeric().getInteger());
+            frame.push(value);
+          } break;
+          case GCodeIROpcode::LoadNamed: {
+            const std::string &symbol = this->module.getSymbol(static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger()));
+            const GCodeRuntimeValue &value = frame.getScope().getNamed().get(symbol);
+            frame.push(value);
+          } break;
+          case GCodeIROpcode::StoreNumbered: {
+            GCodeRuntimeValue value = frame.pop();
+            frame.getScope().getNumbered().put(instr.getValue().assertNumeric().getInteger(), value);
+          } break;
+          case GCodeIROpcode::StoreNamed: {
+            GCodeRuntimeValue value = frame.pop();
+            const std::string &symbol = this->module.getSymbol(static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger()));
+            frame.getScope().getNamed().put(symbol, value);
+          } break;
+        }
+      } catch (GCodeRuntimeError &ex) {
+        if (!ex.getLocation().has_value()) {
+          std::optional<Parser::SourcePosition> position = this->module.getSourceMap().locate(current_address);
+          if (position.has_value()) {
+            throw GCodeRuntimeError(ex.getMessage(), position.value());
           }
-        } break;
-        case GCodeIROpcode::Call: {
-          int64_t pid = frame.pop().assertNumeric().asInteger();
-          frame.call(this->module.getProcedure(pid).getAddress());
-          std::size_t argc = static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger());
-          while (argc-- > 0) {
-            frame.getScope().getNumbered().put(argc, frame.pop());
-          }
-        } break;
-        case GCodeIROpcode::Ret: {
-          frame.ret();
-          std::size_t argc = static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger());
-          while (argc-- > 0) {
-            frame.getScope().getNumbered().put(argc, frame.pop());
-          }
-        } break;
-        case GCodeIROpcode::Dup:
-          frame.dup();
-          break;
-        case GCodeIROpcode::Negate:
-          frame.negate();
-          break;
-        case GCodeIROpcode::Add:
-          frame.add();
-          break;
-        case GCodeIROpcode::Subtract:
-          frame.subtract();
-          break;
-        case GCodeIROpcode::Multiply:
-          frame.multiply();
-          break;
-        case GCodeIROpcode::Divide:
-          frame.divide();
-          break;
-        case GCodeIROpcode::Power:
-          frame.power();
-          break;
-        case GCodeIROpcode::Modulo:
-          frame.modulo();
-          break;
-        case GCodeIROpcode::Compare:
-          frame.compare();
-          break;
-        case GCodeIROpcode::Test: {
-          int64_t mask = instr.getValue().assertNumeric().asInteger();
-          frame.test(mask);
-        } break;
-        case GCodeIROpcode::And:
-          frame.iand();
-          break;
-        case GCodeIROpcode::Or:
-          frame.ior();
-          break;
-        case GCodeIROpcode::Xor:
-          frame.ixor();
-          break;
-        case GCodeIROpcode::Not:
-          frame.inot();
-          break;
-        case GCodeIROpcode::Invoke: {
-          const std::string &functionId = this->module.getSymbol(instr.getValue().assertNumeric().getInteger());
-          std::size_t argc = frame.pop().assertNumeric().asInteger();
-          std::vector<GCodeRuntimeValue> args;
-          while (argc--) {
-            args.push_back(frame.pop());
-          }
-          frame.push(this->functions.invoke(functionId, args));
-        } break;
-        case GCodeIROpcode::LoadNumbered: {
-          const GCodeRuntimeValue &value = frame.getScope().getNumbered().get(instr.getValue().assertNumeric().getInteger());
-          frame.push(value);
-        } break;
-        case GCodeIROpcode::LoadNamed: {
-          const std::string &symbol = this->module.getSymbol(static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger()));
-          const GCodeRuntimeValue &value = frame.getScope().getNamed().get(symbol);
-          frame.push(value);
-        } break;
-        case GCodeIROpcode::StoreNumbered: {
-          GCodeRuntimeValue value = frame.pop();
-          frame.getScope().getNumbered().put(instr.getValue().assertNumeric().getInteger(), value);
-        } break;
-        case GCodeIROpcode::StoreNamed: {
-          GCodeRuntimeValue value = frame.pop();
-          const std::string &symbol = this->module.getSymbol(static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger()));
-          frame.getScope().getNamed().put(symbol, value);
-        } break;
+        }
+        throw;
       }
     }
     this->state.reset();

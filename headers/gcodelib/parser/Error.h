@@ -1,26 +1,13 @@
 #ifndef GCODELIB_PARSER_ERROR_H_
 #define GCODELIB_PARSER_ERROR_H_
 
-#include "gcodelib/parser/Source.h"
-#include <exception>
-#include <string>
-#include <optional>
+#include "gcodelib/Error.h"
 
 namespace GCodeLib::Parser {
 
-  class GCodeParseException : public std::exception {
+  class GCodeParseException : public GCodeLibException {
    public:
-    GCodeParseException(const char *, const SourcePosition &);
-    GCodeParseException(const std::string &, const SourcePosition &);
-    GCodeParseException(const char *);
-    GCodeParseException(const std::string &);
-
-    const std::string &getMessage() const;
-    std::optional<SourcePosition> getLocation() const;
-    const char *what() const noexcept override;
-   private:
-    std::string message;
-    std::optional<SourcePosition> position;
+    using GCodeLibException::GCodeLibException;
   };
 }
 

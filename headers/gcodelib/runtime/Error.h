@@ -1,20 +1,13 @@
 #ifndef GCODELIB_RUNTIME_ERROR_H_
 #define GCODELIB_RUNTIME_ERROR_H_
 
-#include <string>
-#include <exception>
+#include "gcodelib/Error.h"
 
 namespace GCodeLib::Runtime {
 
-  class GCodeRuntimeError : public std::exception {
+  class GCodeRuntimeError : public GCodeLibException {
    public:
-    GCodeRuntimeError(const char *);
-    GCodeRuntimeError(const std::string &);
-  
-    const std::string &getMessage() const;
-    const char *what() const noexcept override;
-   private:
-    std::string message;
+    using GCodeLibException::GCodeLibException;
   };
 }
 

@@ -37,7 +37,7 @@ class TestInterpreter : public GCodeInterpreter {
 int main(int argc, const char **argv) {
   try {
     std::ifstream is(argv[1]);
-    GCodeRepRap compiler;
+    GCodeLinuxCNC compiler;
     auto ir = compiler.compile(is, std::string(argv[1]));
     is.close();
     TestInterpreter interp(*ir);
@@ -49,7 +49,11 @@ int main(int argc, const char **argv) {
       std::cout << "Compile error" << std::endl << '\t' << ex.getMessage() << std::endl;
     }
   } catch (GCodeRuntimeError &ex) {
-    std::cout << "Runtime error" << std::endl << '\t' << ex.getMessage() << std::endl;
+    if (ex.getLocation().has_value()) {
+      std::cout << "Runtime error at " << ex.getLocation().value() << std::endl << '\t' << ex.getMessage() << std::endl;
+    } else {
+      std::cout << "Runtime error" << std::endl << '\t' << ex.getMessage() << std::endl;
+    }
   }
   return EXIT_SUCCESS;
 }

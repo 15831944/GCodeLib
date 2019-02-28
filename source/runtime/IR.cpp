@@ -164,6 +164,14 @@ namespace GCodeLib::Runtime {
     }
   }
 
+  std::unique_ptr<GCodeIRPosition> GCodeIRModule::newPositionRegister(const Parser::SourcePosition &position) {
+    return std::make_unique<GCodeIRPosition>(*this, position);
+  }
+
+  IRSourceMap &GCodeIRModule::getSourceMap() {
+    return this->sourceMap;
+  }
+
   std::size_t GCodeIRModule::getSymbolId(const std::string &symbol) {
     if (this->symbolIdentifiers.count(symbol) != 0) {
       return this->symbolIdentifiers.at(symbol);
@@ -243,5 +251,12 @@ namespace GCodeLib::Runtime {
       os << std::endl;
     }
     return os;
+  }
+
+  GCodeIRPosition::GCodeIRPosition(GCodeIRModule &module, const Parser::SourcePosition &position)
+    : module(module), position(position), start_address(module.length()) {}
+  
+  GCodeIRPosition::~GCodeIRPosition() {
+    module.getSourceMap().addBlock(this->position, this->start_address, this->module.length() - this->start_address);
   }
 }
