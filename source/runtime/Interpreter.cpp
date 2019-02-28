@@ -1,4 +1,5 @@
 #include "gcodelib/runtime/Interpreter.h"
+#include "gcodelib/runtime/Error.h"
 #include <cmath>
 
 namespace GCodeLib::Runtime {
@@ -35,17 +36,16 @@ namespace GCodeLib::Runtime {
   }
 
   GCodeInterpreter::GCodeInterpreter(GCodeIRModule &module)
-    : module(module), work(false) {
+    : module(module) {
     bind_default_functions(this->functions);
   }
   
   void GCodeInterpreter::execute() {
-    this->work = true;
     GCodeCascadeVariableScope sessionScope(&this->getSystemScope());
-    this->stack.push(GCodeRuntimeState(sessionScope));
-    GCodeRuntimeState &frame = this->getFrame();
+    this->state = GCodeRuntimeState(sessionScope);
+    GCodeRuntimeState &frame = this->getState();
     GCodeScopedDictionary<unsigned char> args;
-    while (this->work && frame.getPC() < this->module.length()) {
+    while (this->state.has_value() && frame.getPC() < this->module.length()) {
       const GCodeIRInstruction &instr = this->module.at(frame.nextPC());
       switch (instr.getOpcode()) {
         case GCodeIROpcode::Push:
@@ -55,36 +55,36 @@ namespace GCodeLib::Runtime {
           args.clear();
           break;
         case GCodeIROpcode::SetArg: {
-          unsigned char key = static_cast<unsigned char>(instr.getValue().asInteger());
+          unsigned char key = static_cast<unsigned char>(instr.getValue().assertNumeric().asInteger());
           args.put(key, frame.pop());
         } break;
         case GCodeIROpcode::Syscall: {
-          GCodeSyscallType type = static_cast<GCodeSyscallType>(instr.getValue().asInteger());
+          GCodeSyscallType type = static_cast<GCodeSyscallType>(instr.getValue().assertNumeric().asInteger());
           GCodeRuntimeValue function = frame.pop();
           this->syscall(type, function, args);
         } break;
         case GCodeIROpcode::Jump: {
-          std::size_t pc = static_cast<std::size_t>(instr.getValue().asInteger());
+          std::size_t pc = static_cast<std::size_t>(instr.getValue().assertNumeric().asInteger());
           frame.jump(pc);
         } break;
         case GCodeIROpcode::JumpIf: {
-          std::size_t pc = static_cast<std::size_t>(instr.getValue().asInteger());
-          bool cond = frame.pop().asInteger() != 0;
+          std::size_t pc = static_cast<std::size_t>(instr.getValue().assertNumeric().asInteger());
+          bool cond = frame.pop().assertNumeric().asInteger() != 0;
           if (cond) {
             frame.jump(pc);
           }
         } break;
         case GCodeIROpcode::Call: {
-          int64_t pid = frame.pop().asInteger();
+          int64_t pid = frame.pop().assertNumeric().asInteger();
           frame.call(this->module.getProcedure(pid).getAddress());
-          std::size_t argc = static_cast<std::size_t>(instr.getValue().getInteger());
+          std::size_t argc = static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger());
           while (argc-- > 0) {
             frame.getScope().getNumbered().put(argc, frame.pop());
           }
         } break;
         case GCodeIROpcode::Ret: {
           frame.ret();
-          std::size_t argc = static_cast<std::size_t>(instr.getValue().getInteger());
+          std::size_t argc = static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger());
           while (argc-- > 0) {
             frame.getScope().getNumbered().put(argc, frame.pop());
           }
@@ -117,7 +117,7 @@ namespace GCodeLib::Runtime {
           frame.compare();
           break;
         case GCodeIROpcode::Test: {
-          int64_t mask = instr.getValue().asInteger();
+          int64_t mask = instr.getValue().assertNumeric().asInteger();
           frame.test(mask);
         } break;
         case GCodeIROpcode::And:
@@ -133,8 +133,8 @@ namespace GCodeLib::Runtime {
           frame.inot();
           break;
         case GCodeIROpcode::Invoke: {
-          const std::string &functionId = this->module.getSymbol(instr.getValue().getInteger());
-          std::size_t argc = frame.pop().asInteger();
+          const std::string &functionId = this->module.getSymbol(instr.getValue().assertNumeric().getInteger());
+          std::size_t argc = frame.pop().assertNumeric().asInteger();
           std::vector<GCodeRuntimeValue> args;
           while (argc--) {
             args.push_back(frame.pop());
@@ -142,30 +142,41 @@ namespace GCodeLib::Runtime {
           frame.push(this->functions.invoke(functionId, args));
         } break;
         case GCodeIROpcode::LoadNumbered: {
-          const GCodeRuntimeValue &value = frame.getScope().getNumbered().get(instr.getValue().getInteger());
+          const GCodeRuntimeValue &value = frame.getScope().getNumbered().get(instr.getValue().assertNumeric().getInteger());
           frame.push(value);
         } break;
         case GCodeIROpcode::LoadNamed: {
-          const std::string &symbol = this->module.getSymbol(static_cast<std::size_t>(instr.getValue().getInteger()));
+          const std::string &symbol = this->module.getSymbol(static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger()));
           const GCodeRuntimeValue &value = frame.getScope().getNamed().get(symbol);
           frame.push(value);
         } break;
         case GCodeIROpcode::StoreNumbered: {
           GCodeRuntimeValue value = frame.pop();
-          frame.getScope().getNumbered().put(instr.getValue().getInteger(), value);
+          frame.getScope().getNumbered().put(instr.getValue().assertNumeric().getInteger(), value);
         } break;
         case GCodeIROpcode::StoreNamed: {
           GCodeRuntimeValue value = frame.pop();
-          const std::string &symbol = this->module.getSymbol(static_cast<std::size_t>(instr.getValue().getInteger()));
+          const std::string &symbol = this->module.getSymbol(static_cast<std::size_t>(instr.getValue().assertNumeric().getInteger()));
           frame.getScope().getNamed().put(symbol, value);
         } break;
       }
     }
-    this->stack.pop();
-    this->work = false;
+    this->state.reset();
+  }
+
+  GCodeFunctionScope &GCodeInterpreter::getFunctions() {
+    return this->functions;
   }
   
-  GCodeRuntimeState &GCodeInterpreter::getFrame() {
-    return this->stack.top();
+  GCodeRuntimeState &GCodeInterpreter::getState() {
+    if (this->state.has_value()) {
+      return this->state.value();
+    } else {
+      throw GCodeRuntimeError("Execution state is not defined");
+    }
+  }
+
+  void GCodeInterpreter::stop() {
+    this->state.reset();
   }
 }

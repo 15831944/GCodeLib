@@ -7,6 +7,31 @@ namespace GCodeLib::Runtime {
   static const int64_t GCodeTrue = 1;
   static const int64_t GCodeFalse = 0;
 
+  static bool both_integers(const GCodeRuntimeValue &v1, const GCodeRuntimeValue &v2) {
+    return v1.is(GCodeRuntimeValue::Type::Integer) && v2.is(GCodeRuntimeValue::Type::Integer);
+  }
+
+  template <typename ... T>
+  struct AssertNumericImpl {};
+
+  template <>
+  struct AssertNumericImpl<> {
+    static void assert() {}
+  };
+
+  template <typename A, typename ... B>
+  struct AssertNumericImpl<A, B...> {
+    static void assert(A &arg, B &... args) {
+      arg.assertNumeric();
+      AssertNumericImpl<B...>::assert(args...);
+    }
+  };
+
+  template <typename ... T>
+  static void assert_numeric(T &... args) {
+    AssertNumericImpl<T...>::assert(args...);
+  }
+
   GCodeRuntimeState::GCodeRuntimeState(GCodeVariableScope &system)
     : pc(0) {
     this->scopes.push(std::make_unique<GCodeCascadeVariableScope>(&system));
@@ -77,6 +102,7 @@ namespace GCodeLib::Runtime {
 
   void GCodeRuntimeState::negate() {
     GCodeRuntimeValue value = this->pop();
+    assert_numeric(value);
     if (value.is(GCodeRuntimeValue::Type::Integer)) {
       this->push(-value.getInteger());
     } else {
@@ -84,13 +110,10 @@ namespace GCodeLib::Runtime {
     }
   }
 
-  static bool both_integers(const GCodeRuntimeValue &v1, const GCodeRuntimeValue &v2) {
-    return v1.is(GCodeRuntimeValue::Type::Integer) && v2.is(GCodeRuntimeValue::Type::Integer);
-  }
-
   void GCodeRuntimeState::add() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
+    assert_numeric(v1, v2);
     if (both_integers(v1, v2)) {
       this->push(v1.getInteger() + v2.getInteger());
     } else {
@@ -101,6 +124,7 @@ namespace GCodeLib::Runtime {
   void GCodeRuntimeState::subtract() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
+    assert_numeric(v1, v2);
     if (both_integers(v1, v2)) {
       this->push(v1.getInteger() - v2.getInteger());
     } else {
@@ -111,6 +135,7 @@ namespace GCodeLib::Runtime {
   void GCodeRuntimeState::multiply() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
+    assert_numeric(v1, v2);
     if (both_integers(v1, v2)) {
       this->push(v1.getInteger() * v2.getInteger());
     } else {
@@ -121,18 +146,21 @@ namespace GCodeLib::Runtime {
   void GCodeRuntimeState::divide() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
+    assert_numeric(v1, v2);
     this->push(v1.asFloat() / v2.asFloat());
   }
 
   void GCodeRuntimeState::power() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
+    assert_numeric(v1, v2);
     this->push(pow(v1.asFloat(), v2.asFloat()));
   }
 
   void GCodeRuntimeState::modulo() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
+    assert_numeric(v1, v2);
     if (both_integers(v1, v2)) {
       this->push(v1.getInteger() % v2.getInteger());
     } else {
@@ -143,6 +171,7 @@ namespace GCodeLib::Runtime {
   void GCodeRuntimeState::compare() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
+    assert_numeric(v1, v2);
     int64_t result = 0;
     if (both_integers(v1, v2)) {
       int64_t i1 = v1.getInteger();
@@ -175,7 +204,9 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeRuntimeState::test(int64_t mask) {
-    int64_t value = this->pop().asInteger();
+    GCodeRuntimeValue rtvalue = this->pop();
+    assert_numeric(rtvalue);
+    int64_t value = rtvalue.asInteger();
     if ((value & mask) != 0) {
       this->push(GCodeTrue);
     } else {
@@ -186,23 +217,27 @@ namespace GCodeLib::Runtime {
   void GCodeRuntimeState::iand() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
+    assert_numeric(v1, v2);
     this->push(v1.asInteger() & v2.asInteger());
   }
 
   void GCodeRuntimeState::ior() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
+    assert_numeric(v1, v2);
     this->push(v1.asInteger() | v2.asInteger());
   }
 
   void GCodeRuntimeState::ixor() {
     GCodeRuntimeValue v2 = this->pop();
     GCodeRuntimeValue v1 = this->pop();
+    assert_numeric(v1, v2);
     this->push(v1.asInteger() ^ v2.asInteger());
   }
 
   void GCodeRuntimeState::inot() {
     GCodeRuntimeValue v = this->pop();
+    assert_numeric(v);
     if (v.asInteger() != 0) {
       this->push(GCodeFalse);
     } else {

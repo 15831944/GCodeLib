@@ -3,6 +3,7 @@
 
 #include "gcodelib/Base.h"
 #include <variant>
+#include <string>
 #include <iosfwd>
 
 namespace GCodeLib::Runtime {
@@ -12,12 +13,14 @@ namespace GCodeLib::Runtime {
     enum class Type {
       None,
       Integer,
-      Float
+      Float,
+      String
     };
 
     GCodeRuntimeValue();
     GCodeRuntimeValue(int64_t);
     GCodeRuntimeValue(double);
+    GCodeRuntimeValue(const std::string &);
     GCodeRuntimeValue(const GCodeRuntimeValue &);
     GCodeRuntimeValue &operator=(const GCodeRuntimeValue &);
 
@@ -26,15 +29,21 @@ namespace GCodeLib::Runtime {
 
     int64_t getInteger(int64_t = 0) const;
     double getFloat(double = 0.0) const;
+    const std::string &getString(const std::string & = "") const;
     int64_t asInteger() const;
     double asFloat() const;
+    std::string asString() const;
+
+    bool isNumeric() const;
+    const GCodeRuntimeValue &assertType(Type) const;
+    const GCodeRuntimeValue &assertNumeric() const;
 
     friend std::ostream &operator<<(std::ostream &, const GCodeRuntimeValue &);
 
     static const GCodeRuntimeValue Empty;
    private:
     Type type;
-    std::variant<int64_t, double> value;
+    std::variant<int64_t, double, std::string> value;
   };
 
   enum class GCodeCompare {
