@@ -5,3 +5,4 @@ if meson.get_compiler('cpp').get_id() == 'gcc' or meson.get_compiler('cpp').get_
 endif
 
 subdir('source')
+subdir('tests')

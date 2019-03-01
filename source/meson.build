@@ -1,5 +1,4 @@
 gcodelib_source = [
-  'main.cpp',
   'Error.cpp',
   'parser/AST.cpp',
   'parser/Mangling.cpp',
@@ -23,5 +22,12 @@ gcodelib_source = [
 ]
 
 gcodelib_headers = include_directories('../headers')
-GCodeLib = executable('gcodelib', gcodelib_source,
+GCodeLib = static_library('gcodelib', gcodelib_source,
+  include_directories : [gcodelib_headers])
+
+GCodeMain = executable('gcodemain', 'main.cpp',
+  include_directories : [gcodelib_headers],
+  link_with : GCodeLib)
+
+GCODELIB_DEPENDENCY = declare_dependency(link_with : GCodeLib,
   include_directories : [gcodelib_headers])
