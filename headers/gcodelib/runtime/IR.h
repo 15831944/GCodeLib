@@ -64,7 +64,7 @@ namespace GCodeLib::Runtime {
 
   enum class GCodeSyscallType {
     General = 'G',
-    Misc = 'O',
+    Misc = 'M',
     FeedRate = 'F',
     SpindleSpeed = 'S',
     ToolSelection = 'T'

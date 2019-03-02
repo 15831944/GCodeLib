@@ -213,7 +213,11 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeIRModule::registerProcedure(int64_t procId, const std::string &label) {
-    this->procedures[procId] = this->labels[label];
+    if (this->labels.count(label) != 0) {
+      this->procedures[procId] = this->labels[label];
+    } else {
+      throw GCodeRuntimeError("Label \'" + label + "\' is not found");
+    }
   }
 
   GCodeIRLabel &GCodeIRModule::getProcedure(int64_t procId) const {

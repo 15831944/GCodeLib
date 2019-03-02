@@ -1,6 +1,8 @@
 gcodetest_source = [
   'main.cpp',
   'Error.cpp',
+  'runtime/IR.cpp',
+  'runtime/Translator.cpp',
   'runtime/Value.cpp',
   'runtime/SourceMap.cpp',
   'runtime/Storage.cpp'
