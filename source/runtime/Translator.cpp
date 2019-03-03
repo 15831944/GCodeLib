@@ -220,7 +220,7 @@ namespace GCodeLib::Runtime {
     auto &continueLoop = this->module->getNamedLabel(this->mangler.getStatementStart(loopName));
     auto &breakLoop = this->module->getNamedLabel(this->mangler.getStatementEnd(loopName));
     auto loopStart = this->module->newLabel();
-    if (!loop.isDoWhile()) {
+    if (loop.getLoopType() == Parser::GCodeWhileLoop::LoopType::PreTest) {
       continueLoop.jump();
       loopStart->bind();
       loop.getBody().visit(*this);

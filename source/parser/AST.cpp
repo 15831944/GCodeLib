@@ -330,8 +330,8 @@ namespace GCodeLib::Parser {
     }
   }
 
-  GCodeWhileLoop::GCodeWhileLoop(int64_t label, std::unique_ptr<GCodeNode> condition, std::unique_ptr<GCodeNode> body, bool doWhile, const SourcePosition &position)
-    : GCodeLoop(label, position), condition(std::move(condition)), body(std::move(body)), doWhileLoop(doWhile) {}
+  GCodeWhileLoop::GCodeWhileLoop(int64_t label, std::unique_ptr<GCodeNode> condition, std::unique_ptr<GCodeNode> body, LoopType loopType, const SourcePosition &position)
+    : GCodeLoop(label, position), condition(std::move(condition)), body(std::move(body)), loopType(loopType) {}
 
   const GCodeNode &GCodeWhileLoop::getCondition() const {
     return *this->condition;
@@ -341,12 +341,12 @@ namespace GCodeLib::Parser {
     return *this->body;
   }
 
-  bool GCodeWhileLoop::isDoWhile() const {
-    return this->doWhileLoop;
+  GCodeWhileLoop::LoopType GCodeWhileLoop::getLoopType() const {
+    return this->loopType;
   }
 
   void GCodeWhileLoop::dump(std::ostream &os) const {
-    if (!this->doWhileLoop) {
+    if (this->loopType == LoopType::PreTest) {
       os << '[' << this->getLabel() << ": while " << this->getCondition() << " do " << this->getBody() << ']';
     } else {
       os << '[' << this->getLabel() << ": do " << this->getBody() << " while " << this->getCondition() << ']';

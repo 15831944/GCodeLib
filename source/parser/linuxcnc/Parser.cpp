@@ -369,7 +369,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
         this->error("\'endwhile\' expected");
       }
       this->shift(3);
-      return std::make_unique<GCodeWhileLoop>(id, std::move(conditional), std::move(body), false, position.value());
+      return std::make_unique<GCodeWhileLoop>(id, std::move(conditional), std::move(body), GCodeWhileLoop::LoopType::PreTest, position.value());
     } else {
       this->shift();
       std::unique_ptr<GCodeNode> body = this->nextBlock();
@@ -380,7 +380,7 @@ namespace GCodeLib::Parser::LinuxCNC  {
       }
       this->shift(3);
       std::unique_ptr<GCodeNode> conditional = this->nextExpression();
-      return std::make_unique<GCodeWhileLoop>(id, std::move(conditional), std::move(body), true, position.value());
+      return std::make_unique<GCodeWhileLoop>(id, std::move(conditional), std::move(body), GCodeWhileLoop::LoopType::PostTest, position.value());
     }
   }
 

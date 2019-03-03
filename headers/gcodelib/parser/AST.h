@@ -346,16 +346,20 @@ namespace GCodeLib::Parser {
   class GCodeWhileLoop;
   class GCodeWhileLoop : public GCodeLoop<GCodeWhileLoop, GCodeNode::Type::WhileLoop, int64_t> {
    public:
-    GCodeWhileLoop(int64_t, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, bool, const SourcePosition &);
+    enum class LoopType {
+      PreTest,
+      PostTest
+    };
+    GCodeWhileLoop(int64_t, std::unique_ptr<GCodeNode>, std::unique_ptr<GCodeNode>, LoopType, const SourcePosition &);
     const GCodeNode &getCondition() const;
     const GCodeNode &getBody() const;
-    bool isDoWhile() const;
+    LoopType getLoopType() const;
    protected:
     void dump(std::ostream &) const override;
    private:
     std::unique_ptr<GCodeNode> condition;
     std::unique_ptr<GCodeNode> body;
-    bool doWhileLoop;
+    LoopType loopType;
   };
 
   class GCodeRepeatLoop;

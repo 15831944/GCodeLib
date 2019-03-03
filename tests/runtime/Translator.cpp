@@ -332,7 +332,7 @@ TEST_CASE("While loop") {
       ID,
       make_node(GCodeConstantValue(IntegerConstants[0], position)),
       make_node(GCodeConstantValue(IntegerConstants[1], position)),
-      false,
+      GCodeWhileLoop::LoopType::PreTest,
       position));
     auto ir = translator.translate(*ast);
     REQUIRE(verify_ir(*ir, {
@@ -349,7 +349,7 @@ TEST_CASE("While loop") {
       0,
       make_node(GCodeConstantValue(IntegerConstants[0], position)),
       make_node(GCodeConstantValue(IntegerConstants[1], position)),
-      true,
+      GCodeWhileLoop::LoopType::PostTest,
       position));
     auto ir = translator.translate(*ast);
     REQUIRE(verify_ir(*ir, {
@@ -411,7 +411,7 @@ TEST_CASE("Loop control") {
     make_ast(
       GCodeLoopControl(ID, GCodeLoopControl::ControlType::Continue, position),
       GCodeLoopControl(ID, GCodeLoopControl::ControlType::Break, position)),
-    true,
+    GCodeWhileLoop::LoopType::PostTest,
     position));
   auto ir = translator.translate(*ast);
   REQUIRE(verify_ir(*ir, {
