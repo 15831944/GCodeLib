@@ -25,15 +25,16 @@ namespace GCodeLib::Runtime {
    public:
     GCodeInterpreter(GCodeIRModule &);
     virtual ~GCodeInterpreter() = default;
-    void execute();
+    virtual void execute();
    protected:
     GCodeFunctionScope &getFunctions();
     GCodeRuntimeState &getState();
+    void interpret();
     void stop();
 
     virtual void syscall(GCodeSyscallType, const GCodeRuntimeValue &, const GCodeScopedDictionary<unsigned char> &) = 0;
     virtual GCodeVariableScope &getSystemScope() = 0;
-   private:
+    
     GCodeIRModule &module;
     std::optional<GCodeRuntimeState> state;
     GCodeFunctionScope functions;

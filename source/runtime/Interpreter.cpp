@@ -56,6 +56,11 @@ namespace GCodeLib::Runtime {
   void GCodeInterpreter::execute() {
     GCodeCascadeVariableScope sessionScope(&this->getSystemScope());
     this->state = GCodeRuntimeState(sessionScope);
+    this->interpret();
+    this->state.reset();
+  }
+
+  void GCodeInterpreter::interpret() {
     GCodeRuntimeState &frame = this->getState();
     GCodeScopedDictionary<unsigned char> args;
     while (this->state.has_value() && frame.getPC() < this->module.length()) {
@@ -185,7 +190,6 @@ namespace GCodeLib::Runtime {
         throw;
       }
     }
-    this->state.reset();
   }
 
   GCodeFunctionScope &GCodeInterpreter::getFunctions() {
