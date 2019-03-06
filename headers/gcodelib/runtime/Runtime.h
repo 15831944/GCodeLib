@@ -36,7 +36,6 @@ namespace GCodeLib::Runtime {
     GCodeRuntimeValue pop();
     const GCodeRuntimeValue &peek();
     void dup();
-    void swap();
 
     void negate();
     void add();

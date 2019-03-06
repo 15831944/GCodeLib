@@ -103,16 +103,12 @@ namespace GCodeLib::Runtime {
   }
 
   void GCodeRuntimeState::dup() {
+    if (this->stack.empty()) {
+      throw GCodeRuntimeError("Stack underflow");
+    }
     this->stack.push(this->stack.top());
   }
-
-  void GCodeRuntimeState::swap() {
-    GCodeRuntimeValue upper = this->pop();
-    GCodeRuntimeValue bottom = this->pop();
-    this->push(upper);
-    this->push(bottom);
-  }
-
+  
   void GCodeRuntimeState::negate() {
     GCodeRuntimeValue value = this->pop();
     assert_numeric(value);
