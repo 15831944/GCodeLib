@@ -93,7 +93,6 @@ namespace GCodeLib::Runtime {
     bool bound() const;
     void jump();
     void jumpIf();
-    void call();
     std::size_t getAddress() const;
    private:
     GCodeIRModule &module;

@@ -146,16 +146,6 @@ namespace GCodeLib::Runtime {
       this->patched.push_back(addr);
     }
   }
-
-  void GCodeIRLabel::call() {
-    if (this->address.has_value()) {
-      this->module.appendInstruction(GCodeIROpcode::Call, static_cast<int64_t>(this->address.value()));
-    } else {
-      this->module.appendInstruction(GCodeIROpcode::Call);
-      std::size_t addr = this->module.code.size() - 1;
-      this->patched.push_back(addr);
-    }
-  }
   
   std::size_t GCodeIRLabel::getAddress() const {
     if (this->address.has_value()) {

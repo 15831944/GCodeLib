@@ -66,7 +66,6 @@ TEST_CASE("IR label") {
   REQUIRE_THROWS(label.getAddress());
   REQUIRE_NOTHROW(label.jump());
   REQUIRE_NOTHROW(label.jumpIf());
-  REQUIRE_NOTHROW(label.call());
   REQUIRE_NOTHROW(label.bind());
   REQUIRE(label.bound());
   REQUIRE(module.linked());
@@ -74,20 +73,15 @@ TEST_CASE("IR label") {
   REQUIRE_THROWS(label.bind());
   REQUIRE_NOTHROW(label.jump());
   REQUIRE_NOTHROW(label.jumpIf());
-  REQUIRE_NOTHROW(label.call());
 
   REQUIRE(module.at(0).getOpcode() == GCodeIROpcode::Jump);
   REQUIRE(module.at(0).getValue().getInteger() == label.getAddress());
   REQUIRE(module.at(1).getOpcode() == GCodeIROpcode::JumpIf);
   REQUIRE(module.at(1).getValue().getInteger() == label.getAddress());
-  REQUIRE(module.at(2).getOpcode() == GCodeIROpcode::Call);
+  REQUIRE(module.at(2).getOpcode() == GCodeIROpcode::Jump);
   REQUIRE(module.at(2).getValue().getInteger() == label.getAddress());
-  REQUIRE(module.at(3).getOpcode() == GCodeIROpcode::Jump);
+  REQUIRE(module.at(3).getOpcode() == GCodeIROpcode::JumpIf);
   REQUIRE(module.at(3).getValue().getInteger() == label.getAddress());
-  REQUIRE(module.at(4).getOpcode() == GCodeIROpcode::JumpIf);
-  REQUIRE(module.at(4).getValue().getInteger() == label.getAddress());
-  REQUIRE(module.at(5).getOpcode() == GCodeIROpcode::Call);
-  REQUIRE(module.at(5).getValue().getInteger() == label.getAddress());
 }
 
 TEST_CASE("IR module") {
