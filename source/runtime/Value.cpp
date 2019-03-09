@@ -40,15 +40,15 @@ namespace GCodeLib::Runtime {
 
   GCodeRuntimeValue::GCodeRuntimeValue()
     : type(Type::None) {}
-
-  GCodeRuntimeValue::GCodeRuntimeValue(int64_t value)
-    : type(Type::Integer), value(value) {}
-  
+	
   GCodeRuntimeValue::GCodeRuntimeValue(double value)
     : type(Type::Float), value(value) {}
 
   GCodeRuntimeValue::GCodeRuntimeValue(const std::string &string)
     : type(Type::String), value(string) {}
+
+  GCodeRuntimeValue::GCodeRuntimeValue(const char *string)
+	: type(Type::String), value(string ? std::string(string) : "") {}
 
   GCodeRuntimeValue::GCodeRuntimeValue(const GCodeRuntimeValue &value)
     : type(value.type), value(value.value) {}

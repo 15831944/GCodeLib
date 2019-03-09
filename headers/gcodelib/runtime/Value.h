@@ -18,6 +18,7 @@
 #include <variant>
 #include <string>
 #include <iosfwd>
+#include <type_traits>
 
 namespace GCodeLib::Runtime {
 
@@ -31,9 +32,13 @@ namespace GCodeLib::Runtime {
     };
 
     GCodeRuntimeValue();
-    GCodeRuntimeValue(int64_t);
+	template <typename T, typename E = typename std::enable_if<std::is_integral<T>::value>::type>
+    GCodeRuntimeValue(T value)
+		: type(Type::Integer), value(static_cast<int64_t>(value)) {}
+		
     GCodeRuntimeValue(double);
     GCodeRuntimeValue(const std::string &);
+	GCodeRuntimeValue(const char *);
     GCodeRuntimeValue(const GCodeRuntimeValue &);
     GCodeRuntimeValue &operator=(const GCodeRuntimeValue &);
 
