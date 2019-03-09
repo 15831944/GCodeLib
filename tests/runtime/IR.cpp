@@ -2,6 +2,7 @@
 #include "gcodelib/runtime/IR.h"
 #include <sstream>
 #include <iostream>
+#include <regex>
 
 using namespace GCodeLib::Runtime;
 
@@ -128,4 +129,38 @@ TEST_CASE("IR module") {
     REQUIRE(module.getSourceMap().locate(0).value().getLine() == pos.getLine());
     REQUIRE(module.getSourceMap().locate(0).value().getColumn() == pos.getColumn());
   }
+}
+
+TEST_CASE("IR module output") {
+  GCodeIRModule module;
+  std::size_t id = module.getSymbolId("test");
+  auto &label = module.getNamedLabel("test");
+  label.bind();
+  module.registerProcedure(0, "test");
+  module.appendInstruction(GCodeIROpcode::Push, 0);
+  std::stringstream ss;
+  ss << module;
+  std::string line;
+  std::getline(ss, line);
+  REQUIRE(line.compare("Symbols:") == 0);
+  std::getline(ss, line);
+  std::regex symbolRegex("^" + std::to_string(id) + "\\s+test$");
+  std::smatch match;
+  REQUIRE((std::regex_match(line, match, symbolRegex) && !match.empty()));
+  std::getline(ss, line);
+  REQUIRE(line.compare("") == 0);
+  std::getline(ss, line);
+  REQUIRE(line.compare("Procedures:") == 0);
+  std::getline(ss, line);
+  std::regex procRegex("^" + std::to_string(0) + "\\s+" + std::to_string(label.getAddress()) + "$");
+  REQUIRE((std::regex_match(line, match, procRegex) && !match.empty()));
+  std::getline(ss, line);
+  REQUIRE(line.compare("") == 0);
+  std::getline(ss, line);
+  REQUIRE(line.compare("Code:") == 0);
+  std::getline(ss, line);
+  REQUIRE(line.compare("0:        Push                0") == 0);
+  std::getline(ss, line);
+  REQUIRE(line.empty());
+  REQUIRE(ss.eof());
 }
