@@ -15,6 +15,7 @@
 #define GCODELIB_RUNTIME_RUNTIME_H_
 
 #include "gcodelib/runtime/Storage.h"
+#include "gcodelib/runtime/Config.h"
 #include <stack>
 #include <map>
 #include <functional>
@@ -24,7 +25,7 @@ namespace GCodeLib::Runtime {
 
   class GCodeRuntimeState {
    public:
-    GCodeRuntimeState(GCodeVariableScope &);
+    GCodeRuntimeState(GCodeVariableScope &, const GCodeRuntimeConfig & = GCodeRuntimeConfig::Default);
 
     std::size_t getPC() const;
     std::size_t nextPC();
@@ -58,6 +59,7 @@ namespace GCodeLib::Runtime {
     std::stack<std::unique_ptr<GCodeVariableScope>> scopes;
     GCodeVariableScope *globalScope;
     std::size_t pc;
+    std::reference_wrapper<const GCodeRuntimeConfig> config;
   };
 
   class GCodeFunctionNamespace {

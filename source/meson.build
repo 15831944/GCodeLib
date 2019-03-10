@@ -12,6 +12,7 @@ gcodelib_source = [
   'parser/reprap/Parser.cpp',
   'parser/reprap/Scanner.cpp',
   'parser/reprap/Token.cpp',
+  'runtime/Config.cpp',
   'runtime/Interpreter.cpp',
   'runtime/IR.cpp',
   'runtime/Runtime.cpp',

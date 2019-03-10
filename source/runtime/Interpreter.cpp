@@ -55,7 +55,7 @@ namespace GCodeLib::Runtime {
   
   void GCodeInterpreter::execute() {
     GCodeCascadeVariableScope sessionScope(&this->getSystemScope());
-    this->state = GCodeRuntimeState(sessionScope);
+    this->state = GCodeRuntimeState(sessionScope, this->config);
     this->interpret();
     this->state.reset();
   }

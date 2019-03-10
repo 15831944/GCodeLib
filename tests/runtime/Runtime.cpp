@@ -264,17 +264,59 @@ TEST_CASE("Runtime arithmetic operations") {
 TEST_CASE("Runtime comparison operations") {
   GCodeCascadeVariableScope scope;
   GCodeRuntimeState state(scope);
+  GCodeRuntimeConfig config;
+  config.setComparisonTolerance(0.0);
+  GCodeRuntimeState strict(scope, config);
   SECTION("Integer-Integer") {
     comparison_test<int64_t, int64_t>(state, 100, 200);
   }
   SECTION("Integer-Float") {
     comparison_test<int64_t, double>(state, 100, 200.0);
   }
+  SECTION("Integer-Float strict") {
+    comparison_test<int64_t, double>(strict, 100, 200.0);
+  }
   SECTION("Float-Integer") {
     comparison_test<double, int64_t>(state, 100.0, 200);
   }
+  SECTION("Float-Integer strict") {
+    comparison_test<double, int64_t>(strict, 100.0, 200);
+  }
   SECTION("Float-Float") {
     comparison_test<double, double>(state, 100.0, 200.0);
+  }
+  SECTION("Float-Float strict") {
+    comparison_test<double, double>(strict, 100.0, 200.0);
+  }
+  SECTION("Near zero comparisons") {
+    const double V1 = 100.0;
+    const double V2 = V1 + config.getComparisonTolerance() / 10;
+    REQUIRE_NOTHROW(state.push(GCodeRuntimeValue(V1)));
+    REQUIRE_NOTHROW(state.push(GCodeRuntimeValue(V2)));
+    REQUIRE_NOTHROW(state.compare());
+    REQUIRE_NOTHROW(state.push(GCodeRuntimeValue(V2)));
+    REQUIRE_NOTHROW(state.push(GCodeRuntimeValue(V1)));
+    REQUIRE_NOTHROW(state.compare());
+    REQUIRE_NOTHROW(state.push(GCodeRuntimeValue(V1)));
+    REQUIRE_NOTHROW(state.push(GCodeRuntimeValue(V1)));
+    REQUIRE_NOTHROW(state.compare());
+    int64_t results[] = {
+      state.pop().getInteger(),
+      state.pop().getInteger(),
+      state.pop().getInteger()
+    };
+    REQUIRE((results[0] & static_cast<int64_t>(GCodeCompare::Equals)) != 0);
+    REQUIRE((results[1] & static_cast<int64_t>(GCodeCompare::Equals)) != 0);
+    REQUIRE((results[2] & static_cast<int64_t>(GCodeCompare::Equals)) != 0);
+    REQUIRE((results[0] & static_cast<int64_t>(GCodeCompare::NotEquals)) == 0);
+    REQUIRE((results[1] & static_cast<int64_t>(GCodeCompare::NotEquals)) == 0);
+    REQUIRE((results[2] & static_cast<int64_t>(GCodeCompare::NotEquals)) == 0);
+    REQUIRE((results[0] & static_cast<int64_t>(GCodeCompare::Greater)) == 0);
+    REQUIRE((results[1] & static_cast<int64_t>(GCodeCompare::Greater)) == 0);
+    REQUIRE((results[2] & static_cast<int64_t>(GCodeCompare::Greater)) == 0);
+    REQUIRE((results[0] & static_cast<int64_t>(GCodeCompare::Lesser)) == 0);
+    REQUIRE((results[1] & static_cast<int64_t>(GCodeCompare::Lesser)) == 0);
+    REQUIRE((results[2] & static_cast<int64_t>(GCodeCompare::Lesser)) == 0);
   }
 }
 

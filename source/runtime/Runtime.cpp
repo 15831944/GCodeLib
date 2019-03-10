@@ -24,6 +24,14 @@ namespace GCodeLib::Runtime {
     return v1.is(GCodeRuntimeValue::Type::Integer) && v2.is(GCodeRuntimeValue::Type::Integer);
   }
 
+  static constexpr bool float_equals(double v1, double v2, const GCodeRuntimeConfig &config) {
+    if (config.hasComparisonTolerance()) {
+      return std::fabs(v1 - v2) <= config.getComparisonTolerance();
+    } else {
+      return v1 == v2;
+    }
+  }
+
   template <typename ... T>
   struct AssertNumericImpl {};
 
@@ -45,8 +53,8 @@ namespace GCodeLib::Runtime {
     AssertNumericImpl<T...>::assert(args...);
   }
 
-  GCodeRuntimeState::GCodeRuntimeState(GCodeVariableScope &system)
-    : pc(0) {
+  GCodeRuntimeState::GCodeRuntimeState(GCodeVariableScope &system, const GCodeRuntimeConfig &config)
+    : pc(0), config(config) {
     this->scopes.push(std::make_unique<GCodeCascadeVariableScope>(&system));
     this->globalScope = this->scopes.top().get();
   }
@@ -198,7 +206,7 @@ namespace GCodeLib::Runtime {
     } else {
       double d1 = v1.asFloat();
       double d2 = v2.asFloat();
-      if (d1 == d2) {
+      if (float_equals(d1, d2, this->config.get())) {
         result |= static_cast<int64_t>(GCodeCompare::Equals);
       } else {
         result |= static_cast<int64_t>(GCodeCompare::NotEquals);
