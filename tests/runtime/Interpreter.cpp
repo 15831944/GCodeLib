@@ -99,7 +99,7 @@ TEST_CASE("Opcode execution") {
     });
     expect(*ir, [](GCodeRuntimeState &state) {
       REQUIRE(state.pop().getString().compare(StringConstants[0]) == 0);
-      REQUIRE(state.pop().getFloat() == FloatConstants[0]);
+      REQUIRE(state.pop().getFloat() == Approx(FloatConstants[0]));
       REQUIRE(state.pop().getInteger() == IntConstants[0]);
       REQUIRE_THROWS(state.pop());
     });
@@ -203,7 +203,7 @@ TEST_CASE("Opcode execution") {
       { GCodeIROpcode::Power }
     });
     expect(*ir, [](GCodeRuntimeState &state) {
-      REQUIRE(state.pop().getFloat() == pow(FloatConstants[0], FloatConstants[1]));
+      REQUIRE(state.pop().getFloat() == Approx(pow(FloatConstants[0], FloatConstants[1])));
       REQUIRE_THROWS(state.pop());
     });
   }
@@ -455,8 +455,8 @@ TEST_CASE("Invocation instructions") {
       REQUIRE(state.pop().getInteger() == 0);
       REQUIRE(state.pop().getInteger() == 0);
       REQUIRE(state.pop().getInteger() == 1);
-      REQUIRE(state.pop().getFloat() == atan2(FloatConstants[1], FloatConstants[0]));
-      REQUIRE(state.pop().getFloat() == sin(FloatConstants[0]));
+      REQUIRE(state.pop().getFloat() == Approx(atan2(FloatConstants[1], FloatConstants[0])));
+      REQUIRE(state.pop().getFloat() == Approx(sin(FloatConstants[0])));
       REQUIRE_THROWS(state.pop());
     });
   }
@@ -468,31 +468,31 @@ static void test_predefined_functions(GCodeFunctionScope &scope) {
   std::vector<GCodeRuntimeValue> args = { arg, arg2 };
   std::vector<GCodeRuntimeValue> args2 = { arg2, arg };
   REQUIRE(scope.hasFunction("ATAN"));
-  REQUIRE(scope.invoke("ATAN", args).getFloat() == atan2(arg, arg2));
+  REQUIRE(scope.invoke("ATAN", args).getFloat() == Approx(atan2(arg, arg2)));
   REQUIRE(scope.hasFunction("ABS"));
-  REQUIRE(scope.invoke("ABS", args).getFloat() == fabs(arg));
+  REQUIRE(scope.invoke("ABS", args).getFloat() == Approx(fabs(arg)));
   REQUIRE(scope.hasFunction("ACOS"));
-  REQUIRE(scope.invoke("ACOS", args).getFloat() == acos(arg));
+  REQUIRE(scope.invoke("ACOS", args).getFloat() == Approx(acos(arg)));
   REQUIRE(scope.hasFunction("ASIN"));
-  REQUIRE(scope.invoke("ASIN", args).getFloat() == asin(arg));
+  REQUIRE(scope.invoke("ASIN", args).getFloat() == Approx(asin(arg)));
   REQUIRE(scope.hasFunction("COS"));
-  REQUIRE(scope.invoke("COS", args).getFloat() == cos(arg));
+  REQUIRE(scope.invoke("COS", args).getFloat() == Approx(cos(arg)));
   REQUIRE(scope.hasFunction("EXP"));
-  REQUIRE(scope.invoke("EXP", args).getFloat() == exp(arg));
+  REQUIRE(scope.invoke("EXP", args).getFloat() == Approx(exp(arg)));
   REQUIRE(scope.hasFunction("FIX"));
-  REQUIRE(scope.invoke("FIX", args).getFloat() == floor(arg));
+  REQUIRE(scope.invoke("FIX", args).getFloat() == Approx(floor(arg)));
   REQUIRE(scope.hasFunction("FUP"));
-  REQUIRE(scope.invoke("FUP", args).getFloat() == ceil(arg));
+  REQUIRE(scope.invoke("FUP", args).getFloat() == Approx(ceil(arg)));
   REQUIRE(scope.hasFunction("ROUND"));
-  REQUIRE(scope.invoke("ROUND", args).getFloat() == round(arg));
+  REQUIRE(scope.invoke("ROUND", args).getFloat() == Approx(round(arg)));
   REQUIRE(scope.hasFunction("LN"));
-  REQUIRE(scope.invoke("LN", args2).getFloat() == log(arg2));
+  REQUIRE(scope.invoke("LN", args2).getFloat() == Approx(log(arg2)));
   REQUIRE(scope.hasFunction("SIN"));
-  REQUIRE(scope.invoke("SIN", args).getFloat() == sin(arg));
+  REQUIRE(scope.invoke("SIN", args).getFloat() == Approx(sin(arg)));
   REQUIRE(scope.hasFunction("SQRT"));
-  REQUIRE(scope.invoke("SQRT", args2).getFloat() == sqrt(arg2));
+  REQUIRE(scope.invoke("SQRT", args2).getFloat() == Approx(sqrt(arg2)));
   REQUIRE(scope.hasFunction("TAN"));
-  REQUIRE(scope.invoke("TAN", args).getFloat() == tan(arg));
+  REQUIRE(scope.invoke("TAN", args).getFloat() == Approx(tan(arg)));
   REQUIRE(scope.hasFunction("EXISTS"));
   REQUIRE(scope.invoke("EXISTS", args).getInteger() == 1);
 }

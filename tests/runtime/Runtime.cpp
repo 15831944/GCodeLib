@@ -24,8 +24,8 @@ TEST_CASE("Runtime basic operations") {
     REQUIRE_NOTHROW(state.push(GCodeRuntimeValue("Hello")));
     REQUIRE(state.peek().getString().compare("Hello") == 0);
     REQUIRE(state.pop().getString().compare("Hello") == 0);
-    REQUIRE(state.peek().getFloat() == 3.14);
-    REQUIRE(state.pop().getFloat() == 3.14);
+    REQUIRE(state.peek().getFloat() == Approx(3.14));
+    REQUIRE(state.pop().getFloat() == Approx(3.14));
     REQUIRE(state.peek().getInteger() == 100);
     REQUIRE(state.pop().getInteger() == 100);
     REQUIRE_THROWS(state.peek());
@@ -74,9 +74,24 @@ struct value_common_type<double, int64_t> {
   using Type = double;
 };
 
+template <typename T, typename E = void>
+struct value_comparison {
+  static T get(T value) {
+    return value;
+  }
+};
+
+template <typename T>
+struct value_comparison<T, typename std::enable_if<std::is_floating_point<T>::value>::type> {
+  static Approx get(T value) {
+    return Approx(value);
+  }
+};
+
 template <typename T1, typename T2>
 void arithmetic_test(GCodeRuntimeState &state, T1 V1, T2 V2) {
   using CT = typename value_common_type<T1, T2>::Type;
+  auto cmp = &value_comparison<CT>::get;
   REQUIRE_NOTHROW(state.push(GCodeRuntimeValue(V1)));
   REQUIRE_NOTHROW(state.push(GCodeRuntimeValue(V2)));
   SECTION("Negation") {
@@ -88,32 +103,32 @@ void arithmetic_test(GCodeRuntimeState &state, T1 V1, T2 V2) {
   }
   SECTION("Add") {
     REQUIRE_NOTHROW(state.add());
-    REQUIRE(value_type_cast<CT>::get(state.pop()) == V1 + V2);
+    REQUIRE(value_type_cast<CT>::get(state.pop()) == cmp(V1 + V2));
     REQUIRE_THROWS(state.pop());
   }
   SECTION("Subtract") {
     REQUIRE_NOTHROW(state.subtract());
-    REQUIRE(value_type_cast<CT>::get(state.pop()) == V1 - V2);
+    REQUIRE(value_type_cast<CT>::get(state.pop()) == cmp(V1 - V2));
     REQUIRE_THROWS(state.pop());
   }
   SECTION("Multiply") {
     REQUIRE_NOTHROW(state.multiply());
-    REQUIRE(value_type_cast<CT>::get(state.pop()) == V1 * V2);
+    REQUIRE(value_type_cast<CT>::get(state.pop()) == cmp(V1 * V2));
     REQUIRE_THROWS(state.pop());
   }
   SECTION("Divide") {
     REQUIRE_NOTHROW(state.divide());
-    REQUIRE(value_type_cast<CT>::get(state.pop()) == V1 / V2);
+    REQUIRE(value_type_cast<CT>::get(state.pop()) == cmp(V1 / V2));
     REQUIRE_THROWS(state.pop());
   }
   SECTION("Power") {
     REQUIRE_NOTHROW(state.power());
-    REQUIRE(value_type_cast<double>::get(state.pop()) == pow(V1, V2));
+    REQUIRE(value_type_cast<double>::get(state.pop()) == value_comparison<double>::get(pow(V1, V2)));
     REQUIRE_THROWS(state.pop());
   }
   SECTION("Modulo") {
     REQUIRE_NOTHROW(state.modulo());
-    REQUIRE(value_type_cast<CT>::get(state.pop()) == fmod(V1, V2));
+    REQUIRE(value_type_cast<CT>::get(state.pop()) == cmp(fmod(V1, V2)));
     REQUIRE_THROWS(state.pop());
   }
   SECTION("Bitwise and") {

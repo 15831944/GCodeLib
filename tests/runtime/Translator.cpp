@@ -70,7 +70,7 @@ static bool operator!=(const GCodeRuntimeValue &v1, const GCodeRuntimeValue &v2)
     case GCodeRuntimeValue::Type::Integer:
       return v1.getInteger() != v2.getInteger();
     case GCodeRuntimeValue::Type::Float:
-      return v1.getFloat() != v2.getFloat();
+      return v1.getFloat() != Approx(v2.getFloat());
     case GCodeRuntimeValue::Type::String:
       return v1.getString().compare(v2.getString()) != 0;
     default:

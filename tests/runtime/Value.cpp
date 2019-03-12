@@ -26,8 +26,8 @@ TEST_CASE("Runtime values") {
   SECTION("Values") {
     REQUIRE(integer.getInteger() == INT);
     REQUIRE(real.getInteger(INT) == INT);
-    REQUIRE(real.getFloat() == REAL);
-    REQUIRE(integer.getFloat(REAL) == REAL);
+    REQUIRE(real.getFloat() == Approx(REAL));
+    REQUIRE(integer.getFloat(REAL) == Approx(REAL));
     REQUIRE(string.getString().compare(STR) == 0);
     REQUIRE(integer.getString(STR).compare(STR) == 0);
   }
@@ -40,15 +40,15 @@ TEST_CASE("Runtime values") {
     REQUIRE(copy.getInteger() == INT);
     copy = real;
     REQUIRE(copy.getType() == Type::Float);
-    REQUIRE(copy.getFloat() == REAL);
+    REQUIRE(copy.getFloat() == Approx(REAL));
   }
   SECTION("Value conversions") {
     REQUIRE(integer.asInteger() == INT);
     REQUIRE(real.asInteger() == 3);
     REQUIRE(string.asInteger() == 0);
-    REQUIRE(integer.asFloat() == static_cast<double>(INT));
-    REQUIRE(real.asFloat() == REAL);
-    REQUIRE(string.asFloat() == 0.0);
+    REQUIRE(integer.asFloat() == Approx(static_cast<double>(INT)));
+    REQUIRE(real.asFloat() == Approx(REAL));
+    REQUIRE(string.asFloat() == Approx(0.0));
     REQUIRE(integer.asString().compare(std::to_string(INT)) == 0);
     REQUIRE(real.asString().compare(std::to_string(REAL)) == 0);
     REQUIRE(string.asString().compare(STR) == 0);
@@ -57,7 +57,7 @@ TEST_CASE("Runtime values") {
     REQUIRE((integer.isNumeric() && real.isNumeric()));
     REQUIRE_FALSE((none.isNumeric() || string.isNumeric()));
     REQUIRE_NOTHROW(integer.assertType(Type::Integer).getInteger() == INT);
-    REQUIRE_NOTHROW(real.assertType(Type::Float).getFloat() == REAL);
+    REQUIRE_NOTHROW(real.assertType(Type::Float).getFloat() == Approx(REAL));
     REQUIRE_NOTHROW(none.assertType(Type::None));
     REQUIRE_NOTHROW(string.assertType(Type::String).getString().compare(STR) == 0);
     REQUIRE_THROWS(integer.assertType(Type::Float));
@@ -65,7 +65,7 @@ TEST_CASE("Runtime values") {
     REQUIRE_THROWS(none.assertType(Type::String));
     REQUIRE_THROWS(string.assertType(Type::None));
     REQUIRE_NOTHROW(integer.assertNumeric().getInteger() == INT);
-    REQUIRE_NOTHROW(real.assertNumeric().asFloat() == REAL);
+    REQUIRE_NOTHROW(real.assertNumeric().asFloat() == Approx(REAL));
     REQUIRE_THROWS(none.assertNumeric());
     REQUIRE_THROWS(string.assertNumeric());
   }

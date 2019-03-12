@@ -94,7 +94,7 @@ TEST_CASE("IR module") {
     REQUIRE_NOTHROW(module.appendInstruction(GCodeIROpcode::Push, 3.14));
     REQUIRE(module.length() == 2);
     REQUIRE(module.at(0).getOpcode() == GCodeIROpcode::Power);
-    REQUIRE(module.at(1).getValue().getFloat() == 3.14);
+    REQUIRE(module.at(1).getValue().getFloat() == Approx(3.14));
   }
   SECTION("Symbols") {
     std::size_t hello = module.getSymbolId("hello");
