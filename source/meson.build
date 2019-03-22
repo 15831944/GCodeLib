@@ -26,9 +26,5 @@ gcodelib_headers = include_directories('../headers')
 GCodeLib = static_library('gcodelib', gcodelib_source,
   include_directories : [gcodelib_headers])
 
-GCodeMain = executable('gcodemain', 'main.cpp',
-  include_directories : [gcodelib_headers],
-  link_with : GCodeLib)
-
 GCODELIB_DEPENDENCY = declare_dependency(link_with : GCodeLib,
   include_directories : [gcodelib_headers])

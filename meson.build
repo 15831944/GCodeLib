@@ -6,3 +6,4 @@ endif
 
 subdir('source')
 subdir('tests')
+subdir('example')
